@@ -1,0 +1,4 @@
+"""Auxilary distribution classes for the module"""
+from probabilistic_word_embeddings.distributions.uniform_categorical import UniformCategorical
+from probabilistic_word_embeddings.distributions.mvn_precision import MultivariateNormalPrecision
+from probabilistic_word_embeddings.distributions.noninformative import Noninformative
