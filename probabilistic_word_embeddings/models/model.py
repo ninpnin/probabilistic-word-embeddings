@@ -37,11 +37,11 @@ class Model:
         assert self.data_size is not None, "Define model.data_size to get loss"
         return self.batch_size / self.data_size
 
-    def loss(self, batch, x):
+    def loss(self, batch, e):
         """Returns the posterior probability of a batch of the data"""
         prior_weight = self.prior_weight()
 
-        prior_prob = self.prior.log_prob(x)
+        prior_prob = e.log_prob()
         prior_loss = - prior_prob * prior_weight
         if isinstance(x, dict):
             likelihood = self.likelihood.loss(batch, x["theta"])

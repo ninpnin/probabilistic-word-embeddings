@@ -43,7 +43,7 @@ class Noninformative(mvn_diag.MultivariateNormalDiag):
           validate_args=validate_args,
           allow_nan_stats=allow_nan_stats,
           name=name)
-    
+        
   def _log_prob(self, x):
     if x.shape.rank == 1:
       return tf.constant(0.0)

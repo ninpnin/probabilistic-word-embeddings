@@ -18,21 +18,28 @@ import progressbar
 
 class Embedding:
     """Custom list that returns None instead of IndexError"""
-    def __init__(self, vocabulary, dimensionality):
+    def __init__(self, vocabulary, dimensionality, lambda0=1.0):
         assert isinstance(vocabulary, set)
         keys = sorted(list(vocabulary))
         values = tf.range(len(keys))
         init = tf.lookup.KeyValueTensorInitializer(keys, values)
         self.vocabulary = tf.lookup.StaticHashTable(init, default_value=-1)
         self.theta = np.random.rand(len(keys), dimensionality) - 0.5
+        self.lambda0 = lambda0
 
     def __getitem__(self, item):
         if type(item) == str or isinstance(item, list):
             item = tf.constant(item)
+        print("Item", item)
         ix = self.vocabulary.lookup(item)
-        print(ix)
+        print("Ix", ix)
         return tf.gather(self.theta, ix, axis=0)
 
+    def __len__(self):
+        return len(self.theta)
+
+    def log_prob(self):
+        return tf.reduce_sum(tf.multiply(self.theta, self.theta)) * self.lambda0
 
 class LaplacianEmbedding(Embedding):
     """
