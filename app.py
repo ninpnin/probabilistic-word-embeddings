@@ -1,4 +1,4 @@
-from probabilistic_word_embeddings.models.base_models import sgns_likelihood, generate_cbow_batch, generate_sgns_batch
+from probabilistic_word_embeddings.models import sgns_likelihood, generate_cbow_batch, generate_sgns_batch
 import numpy as np
 from probabilistic_word_embeddings.embeddings import Embedding
 import tensorflow as tf

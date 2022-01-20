@@ -1,7 +1,6 @@
 import tensorflow as tf
 import tensorflow_probability as tfp
 tfd = tfp.distributions
-import probabilistic_word_embeddings.distributions as custom_dist
 
 # Bernoulli Skip-Gram with Negative Samples
 def sgns_likelihood(batch, theta):

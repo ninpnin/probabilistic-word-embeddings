@@ -8,7 +8,6 @@ tfd = tfp.distributions
 tfb = tfp.bijectors
 Root = tfd.JointDistributionCoroutine.Root
 import functools
-import probabilistic_word_embeddings.distributions as ctd
 from collections import Counter
 
 import numpy as np
@@ -58,14 +57,3 @@ class LaplacianEmbedding(Embedding):
         lambda0: The diagonal weighting of the precision matrix. Corresponds to standard deviation if the Laplacian is a zero matrix.
         lambda1: The off-diagonal weighting of the precision matrix.
     """
-    def __init__(self, vocab_size, laplacian=None, lambda0=1.0, lambda1=1.0, dim=25):
-        precision = tf.sparse.eye(vocab_size) / (lambda0 * lambda0)
-        if laplacian != None:
-            precision = tf.sparse.add(precision, laplacian / (lambda1 * lambda1) )
-        
-        model = tfd.Sample(ctd.MultivariateNormalPrecision(precision=precision), dim)
-        embedding = tfd.TransformedDistribution(
-            distribution=model,
-            bijector=tfp.bijectors.Transpose(perm=[1, 0])
-        )
-        super().__init__(embedding)
