@@ -78,29 +78,3 @@ class CBOW(Model):
         print("V D", vocab_size, dim)
         likelihood = cbow_model(vocab_size=vocab_size, dim=dim, ws=ws, ns=ns, batch_size=batch_size)
         super(CBOW, self).__init__(prior, likelihood, ws=ws, ns=ns, batch_size=batch_size)
-
-class DynamicSGNS(Model):
-    """
-    A dynamic model with the SGNS likelihood function.
-
-    Args:
-        prior: the prior probability distribution of the latent parameters
-    """
-    def __init__(self, prior):
-        pass
-
-class DynamicCBOW(Model):
-    """
-    A dynamic model with the CBOW likelihood function.
-
-    Args:
-        prior: the prior probability distribution of the latent parameters
-    """
-    def __init__(self, prior, ws=2, ns=5, batch_size=25000):
-        timesteps = prior.event_shape[0] - 1 # -1 since the last element is alphas
-        vocab_size = prior.event_shape[1]
-        dim = prior.event_shape[2]
-
-        print("T", timesteps, "V", vocab_size, "D", dim)
-        likelihood = dynamic_cbow(timesteps=timesteps, vocab_size=vocab_size, dim=dim, ws=ws, ns=ns, batch_size=batch_size)
-        super(DynamicCBOW, self).__init__(prior, likelihood, ws=ws, ns=ns, batch_size=batch_size)
