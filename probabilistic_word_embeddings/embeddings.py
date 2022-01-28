@@ -16,7 +16,7 @@ import random
 import progressbar
 
 class Embedding:
-    def __init__(self, vocabulary, dimensionality, lambda0=1.0, shared_context_vectors=True):
+    def __init__(self, vocabulary, dimensionality, lambda0=0.0, shared_context_vectors=True):
         assert isinstance(vocabulary, set)
         keys = list(vocabulary)
         if shared_context_vectors:
@@ -27,15 +27,16 @@ class Embedding:
         values = tf.range(len(keys))
         init = tf.lookup.KeyValueTensorInitializer(keys, values)
         self.vocabulary = tf.lookup.StaticHashTable(init, default_value=-1)
-        self.theta = tf.Variable(np.random.rand(len(keys), dimensionality) - 0.5)
+        self.theta = tf.Variable(np.random.rand(len(keys), dimensionality) - 0.5, dtype=tf.float64)
         self.lambda0 = lambda0
 
+    @tf.function
     def __getitem__(self, item):
         if type(item) == str or isinstance(item, list):
             item = tf.constant(item)
         #print("Item", item)
         ix = self.vocabulary.lookup(item)
-        assert tf.math.reduce_min(ix) >= 0, "Requested word not found in embedding"
+        #assert tf.math.reduce_min(ix) >= 0, "Requested word not found in embedding"
 
         #print("Ix", ix)
         return tf.gather(self.theta, ix, axis=0)
@@ -44,7 +45,7 @@ class Embedding:
         return len(self.theta)
 
     def log_prob(self):
-        return tf.reduce_sum(tf.multiply(self.theta, self.theta)) * self.lambda0
+        return - tf.reduce_sum(tf.multiply(self.theta, self.theta)) * self.lambda0
 
 class LaplacianEmbedding(Embedding):
     """
