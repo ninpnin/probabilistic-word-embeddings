@@ -5,7 +5,7 @@ import tensorflow as tf
 import scipy.spatial.distance
 import progressbar
 
-text = open("nietzsche.txt").read().lower().split()
+text = open("wiki.txt").read().lower().split()
 vocabulary = set(text)
 print("'man' in vocabulary", 'man' in vocabulary)
 
@@ -23,14 +23,15 @@ opt = tf.keras.optimizers.Adam(learning_rate=0.001)
 
 data = tf.constant(text)
 N = len(data)
-batch_size = 10000
+batch_size = 25000
 batches = N // batch_size
 for epoch in range(100):
 	print(f"Epoch {epoch}")
 	#i,j,x = generate_sgns_batch(data, ws=5, ns=5, batch=2, start_ix=0)
 	for batch in progressbar.progressbar(range(batches)):
 		start_ix = batch_size * batch
-		i,j,x = generate_sgns_batch(data, ws=5, ns=5, batch=batch_size, start_ix=start_ix)
+		
+		i,j,x  = generate_sgns_batch(data, ws=5, ns=5, batch=batch_size, start_ix=start_ix)
 		objective = lambda: - tf.reduce_sum(sgns_likelihood(e, i, j, x=x)) + e.log_prob()
 		step_count = opt.minimize(objective, [e.theta]).numpy()
 

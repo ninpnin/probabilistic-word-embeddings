@@ -19,9 +19,9 @@ def sgns_likelihood(embedding, i, j, x=None):
     return tf.reduce_sum(log_ps)
     
 # Generate a random i,j batch of the data.
-@tf.function
+#@tf.function
 def generate_sgns_batch(data, ws=5, ns=5, batch=150000, start_ix=0, dataset_ix=0):
-    i,j = generate_cbow_batch(data, ws=ws, ns=ns, batch=batch, start_ix=start_ix, dataset_ix=dataset_ix)
+    i,j = _generate_cbow_batch(data, tf.constant(ws), tf.constant(ns), tf.constant(batch), tf.constant(start_ix))
     
     i = tf.transpose(tf.tile([i], [ws * 2, 1]))
     
@@ -31,8 +31,13 @@ def generate_sgns_batch(data, ws=5, ns=5, batch=150000, start_ix=0, dataset_ix=0
     return i,j,x
 
 # Generate a random i,j batch of the data.
-@tf.function
 def generate_cbow_batch(data, ws=5, ns=5, batch=150000, start_ix=0, dataset_ix=0):
+    #settings = tf.constant([ws, ns, batch, start_ix, dataset_ix])
+    return _generate_cbow_batch(data, tf.constant(ws), tf.constant(ns), tf.constant(batch), tf.constant(start_ix))
+
+@tf.function
+def _generate_cbow_batch(data, ws, ns, batch, start_ix):
+    #ws, ns, batch, start_ix, dataset_ix = settings
     # the dog saw the cat
     # data = [0, 1, 2, ..., 0, 3]
     #data = datasets[dataset_ix]
