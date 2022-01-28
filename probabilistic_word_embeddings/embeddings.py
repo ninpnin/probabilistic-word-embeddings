@@ -16,22 +16,28 @@ import random
 import progressbar
 
 class Embedding:
-    """Custom list that returns None instead of IndexError"""
-    def __init__(self, vocabulary, dimensionality, lambda0=1.0):
+    def __init__(self, vocabulary, dimensionality, lambda0=1.0, shared_context_vectors=True):
         assert isinstance(vocabulary, set)
-        keys = sorted(list(vocabulary))
+        keys = list(vocabulary)
+        if shared_context_vectors:
+            keys = keys + list(set([key + "_c" for key in keys]))
+        else:
+            keys = keys + list(set([key.split("_")[0] + "_c" for key in keys]))
+        keys = sorted(keys)
         values = tf.range(len(keys))
         init = tf.lookup.KeyValueTensorInitializer(keys, values)
         self.vocabulary = tf.lookup.StaticHashTable(init, default_value=-1)
-        self.theta = np.random.rand(len(keys), dimensionality) - 0.5
+        self.theta = tf.Variable(np.random.rand(len(keys), dimensionality) - 0.5)
         self.lambda0 = lambda0
 
     def __getitem__(self, item):
         if type(item) == str or isinstance(item, list):
             item = tf.constant(item)
-        print("Item", item)
+        #print("Item", item)
         ix = self.vocabulary.lookup(item)
-        print("Ix", ix)
+        assert tf.math.reduce_min(ix) >= 0, "Requested word not found in embedding"
+
+        #print("Ix", ix)
         return tf.gather(self.theta, ix, axis=0)
 
     def __len__(self):

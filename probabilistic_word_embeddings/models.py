@@ -3,12 +3,19 @@ import tensorflow_probability as tfp
 tfd = tfp.distributions
 
 # Bernoulli Skip-Gram with Negative Samples
-def sgns_likelihood(batch, theta):
+def sgns_likelihood(batch, embedding):
     i, j, x = batch[0], batch[1], batch[2]
-    logits = tf.tensordot(theta[i], theta[j], axes=(-1,-1))
+    rhos, alphas = embedding[i], embedding[j]
+
+    #print(rhos.shape, alphas.shape)
+    logits = tf.reduce_sum(tf.multiply(embedding[i], embedding[j]), axis=-1)
+    # Map 1 => 1, 0 => -1
+    x = 2 * x - 1
+    #print(x.shape, i.shape, j.shape, logits.shape)
+    logits = tf.multiply(logits, x)
     ps = tf.math.sigmoid(logits)
     log_ps = tf.math.log(ps)
-    return tf.reduce_sum(log_ps) + theta.log_prob()
+    return tf.reduce_sum(log_ps)
     
 # Generate a random i,j batch of the data.
 #@tf.function
@@ -19,7 +26,8 @@ def generate_sgns_batch(data, D=100, ws=5, ns=5, batch=150000, start_ix=0, datas
     
     i = tf.reshape(i, [ws * 2 * (1 + ns) * batch])
     j = tf.reshape(j, [ws * 2 * (1 + ns) * batch])
-    return i,j
+    x = tf.concat([tf.ones(ws * 2 * batch,dtype=tf.float64), tf.zeros(ws * 2 * ns * batch, dtype=tf.float64)], axis=0,)
+    return i,j,x
 
 def x_batch_sgns(minibatch, ws, ns):
     x_pos = tf.ones((minibatch * ws * 2,), dtype=tf.int32)
@@ -57,5 +65,8 @@ def generate_cbow_batch(datasets, D=100, ws=5, ns=5, batch=150000, start_ix=0, d
     # Concatenate positive and negative samples
     i = tf.concat([i, ns_i], axis=0)
     j = tf.concat([j, ns_j], axis=0)
+    
+    # add context marker
+    j = j + "_c"
     
     return i,j
