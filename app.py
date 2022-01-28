@@ -1,11 +1,14 @@
 from probabilistic_word_embeddings.models import sgns_likelihood, generate_cbow_batch, generate_sgns_batch
 import numpy as np
 from probabilistic_word_embeddings.embeddings import Embedding
+from probabilistic_word_embeddings.preprocessing import filter_rare_words
 import tensorflow as tf
 import scipy.spatial.distance
 import progressbar
 
 text = open("wiki.txt").read().lower().split()
+text = filter_rare_words(text)
+
 vocabulary = set(text)
 print("'man' in vocabulary", 'man' in vocabulary)
 
