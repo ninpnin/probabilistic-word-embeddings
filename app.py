@@ -1,9 +1,7 @@
-from probabilistic_word_embeddings.models import sgns_likelihood, generate_cbow_batch, generate_sgns_batch
 from probabilistic_word_embeddings.embeddings import Embedding
 from probabilistic_word_embeddings.preprocessing import filter_rare_words
 from probabilistic_word_embeddings.estimation import map_estimate
 import scipy.spatial.distance
-import progressbar
 
 text = open("wiki.txt").read().lower().split()
 text = filter_rare_words(text)
