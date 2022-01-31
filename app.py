@@ -35,7 +35,7 @@ for epoch in range(100):
 		start_ix = batch_size * batch
 		
 		i,j,x  = generate_sgns_batch(data, ws=5, ns=5, batch=batch_size, start_ix=start_ix)
-		objective = lambda: - tf.reduce_sum(sgns_likelihood(e, i, j, x=x)) + e.log_prob()
+		objective = lambda: - tf.reduce_sum(sgns_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
 		step_count = opt.minimize(objective, [e.theta]).numpy()
 
 	print("Cosdist 'this', 'this'", scipy.spatial.distance.cosine(e["this"], e["this"]))
