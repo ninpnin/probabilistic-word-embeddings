@@ -1,6 +1,6 @@
 import tensorflow as tf
 import pickle
-from probabilistic_word_embeddings.utils import dict_to_sparse
+from .utils import dict_to_sparse
 
 def _read_pairs(fname, d, N, suffix1="", suffix2="", cross=False):
     f = open(fname, "r")

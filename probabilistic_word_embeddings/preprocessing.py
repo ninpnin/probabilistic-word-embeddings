@@ -2,7 +2,6 @@ import re, pickle, os, json
 import progressbar
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.preprocessing.text import Tokenizer
 
 from probabilistic_word_embeddings.utils import dict_to_tf, transitive_dict
 

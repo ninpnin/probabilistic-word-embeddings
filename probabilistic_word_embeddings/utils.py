@@ -2,25 +2,6 @@ import numpy as np
 import tensorflow as tf
 import pickle
     
-# Embeddings
-def load_embeddings(rhos="rhos.npy", alphas="alphas.npy", folder="fits/", split_axis=0):
-    rhos, alphas = folder + rhos, folder + alphas
-    theta = tf.concat([np.load(rhos), np.load(alphas)], axis=split_axis)
-    return tf.variable(theta, dtype=tf.float32)
-
-def combine_theta(rhos, alphas, axis=0):
-    return tf.concat([rhos, alphas], axis=axis)
-    
-def split_theta(theta, axis=0, index=0):
-    no = theta.shape[axis]
-    theta_list = tf.split(theta, no, axis=axis)
-    rhos_list = theta_list[:index]
-    alphas_list = theta_list[index:]
-    
-    rhos = tf.concat(rhos_list, axis=axis)
-    alphas = tf.concat(alphas_list, axis=axis)
-    return rhos, alphas
-
 # MAP estimation
 #@tf.function
 def shuffled_indices(data_len, batch_len):
@@ -38,19 +19,6 @@ def shuffled_indices(data_len, batch_len):
         array = tf.transpose(array)
         array = tf.random.shuffle(array)
         return array
-
-def print_and_save(theta, number, split_axis=0, split_ix=0):
-    print("Theta:\n", theta)
-
-    theta = theta.numpy()
-    rho, alpha = split_theta(theta, axis=split_axis, index=split_ix)
-    
-    np.save("fits/alphas.npy", alpha)
-    if number != None:
-        number = "{:02}".format(number)
-        np.save("fits/rhos_at_" + number + ".npy", rho)
-    else:
-        np.save("fits/rhos.npy", rho)
 
 # Sparse matrices
 def dict_to_sparse(tensor_dict, shape):
@@ -84,7 +52,6 @@ def load_sparse(fpath):
     stensor = pickle.load(tensor_f)
     tensor_f.close()
     return stensor
-
 
 def dict_to_tf(d):
     keys = list(d.keys())
@@ -132,17 +99,3 @@ def inverse_dict(d):
 
     return inv_d
     
-if __name__ == "__main__":
-    
-    T, V, D = 2, 3, 5
-    rhos = np.zeros([T, V, D])
-    
-    alphas = np.ones([1, V, D])
-    
-    theta = combine_theta(rhos, alphas, axis=0)
-    
-    print(theta)
-    
-    rhos, alphas = split_theta(theta, axis=0, index=T)
-    
-    print(rhos, alphas)
