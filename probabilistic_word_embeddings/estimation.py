@@ -7,20 +7,6 @@ from .models import generate_sgns_batch, sgns_likelihood
 import glob
 import progressbar
 
-@tf.function
-def _optimize_step(model, batch, optimizer, theta):
-    losses = tfp.math.minimize(lambda: model.loss(batch, theta), optimizer=optimizer, num_steps=1)
-    return losses
-
-    
-def _variable_values(variables):
-    if isinstance(variables, dict):
-        return {label: variable.numpy() for label, variable in variables.items()}
-    elif isinstance(variables, list):
-        return [variable.numpy() for variable in variables]
-    else:
-        return variables.numpy()
-
 def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, profile=False, history=False):
     """
     This function performs MAP estimation.
