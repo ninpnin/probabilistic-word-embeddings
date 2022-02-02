@@ -1,18 +1,40 @@
-import re, pickle, os, json
-import progressbar
 import numpy as np
 import tensorflow as tf
-
-from probabilistic_word_embeddings.utils import dict_to_tf, transitive_dict
+from .utils import dict_to_tf, transitive_dict
 
 def filter_rare_words(data, limit=5):
-    vocab = {}
+    counts = {}
     for wd in data:
-        vocab[wd] = vocab.get(wd, 0) + 1
-    
+        counts[wd] = counts.get(wd, 0) + 1
+
     outdata = []
     for wd in data:
-        if vocab[wd] >= limit:
+        if counts[wd] >= limit:
             outdata.append(wd)
 
-    return outdata
+    return outdata, counts
+
+# Discard words with the probability of 1 - sqrt(10^-5 / freq)
+# Initially proposed by Mikolov et al. (2013)
+#@tf.function
+def downsample_common_words(data, counts, cutoff=0.00001):
+    if not isinstance(data, tf.Tensor):
+        data = tf.constant(data)
+
+    print("Discard some instances of the most common words...")
+    N = sum(counts.values())
+    counts_tf = dict_to_tf(counts)
+    
+    frequencies = counts_tf.lookup(data) / N
+    # Discard probability based on relative frequency
+    probs = 1. - tf.sqrt(cutoff / frequencies)
+    # Randomize and fetch by this probability
+    rands = tf.random.uniform(shape=data.shape, dtype=tf.float64)
+    kepts = rands > probs
+    indices = tf.where(kepts)
+    newdata = tf.gather_nd(data, indices)
+
+    #newdata.numpy().tolist()
+
+    newdata = [wd.decode("utf-8") for wd in newdata.numpy()]
+    return newdata

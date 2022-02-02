@@ -1,10 +1,12 @@
 from probabilistic_word_embeddings.embeddings import Embedding
-from probabilistic_word_embeddings.preprocessing import filter_rare_words
+from probabilistic_word_embeddings.preprocessing import filter_rare_words, downsample_common_words
 from probabilistic_word_embeddings.estimation import map_estimate
 import scipy.spatial.distance
+import tensorflow as tf
 
 text = open("wiki.txt").read().lower().split()
-text = filter_rare_words(text)
+text, counts = filter_rare_words(text)
+text = downsample_common_words(text, counts)
 
 vocabulary = set(text)
 vocab_size = len(vocabulary)
