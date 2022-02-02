@@ -1,6 +1,5 @@
 """Point estimation of the models"""
 import tensorflow as tf
-import tensorflow_probability as tfp
 # Load model from models.py
 from .utils import shuffled_indices
 from .models import generate_sgns_batch, sgns_likelihood

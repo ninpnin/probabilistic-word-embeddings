@@ -2,8 +2,6 @@ import unittest
 
 import math
 import tensorflow as tf
-import tensorflow_probability as tfp
-tfd = tfp.distributions
 import probabilistic_word_embeddings
 from probabilistic_word_embeddings.embeddings import NormalEmbedding, LaplacianEmbedding, DynamicNormalEmbedding, DynamicInformativeEmbedding, concat_embeddings
 
