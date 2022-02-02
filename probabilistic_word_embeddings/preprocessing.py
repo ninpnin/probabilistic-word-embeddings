@@ -38,3 +38,10 @@ def downsample_common_words(data, counts, cutoff=0.00001):
 
     newdata = [wd.decode("utf-8") for wd in newdata.numpy()]
     return newdata
+
+def preprocess_standard(text):
+    text, counts = filter_rare_words(text)
+    text = downsample_common_words(text, counts)
+
+    vocabulary = set(text)
+    return text, vocabulary

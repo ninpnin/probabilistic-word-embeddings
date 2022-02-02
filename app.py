@@ -1,22 +1,18 @@
 from probabilistic_word_embeddings.embeddings import Embedding
-from probabilistic_word_embeddings.preprocessing import filter_rare_words, downsample_common_words
+from probabilistic_word_embeddings.preprocessing import preprocess_standard
 from probabilistic_word_embeddings.estimation import map_estimate
 import scipy.spatial.distance
 import tensorflow as tf
 
 text = open("wiki.txt").read().lower().split()
-text, counts = filter_rare_words(text)
-text = downsample_common_words(text, counts)
-
-vocabulary = set(text)
-vocab_size = len(vocabulary)
-print(f"Text length: {len(text)}, vocab size {vocab_size}")
+text, vocabulary = preprocess_standard(text)
+print(f"Train on a text of length {len(text)} with a vocabulary size of {len(vocabulary)}")
 
 dim = 25
 e = Embedding(vocabulary=vocabulary, dimensionality=dim)
 
 # Perform MAP estimation
-e = map_estimate(e, text, model="sgns", epochs=1)
+e = map_estimate(e, text, model="sgns", epochs=3)
 
 # Do some sanity checks
 print("Cosdist 'this', 'this'", scipy.spatial.distance.cosine(e["this"], e["this"]))
