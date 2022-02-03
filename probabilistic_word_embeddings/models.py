@@ -4,8 +4,8 @@ import tensorflow as tf
 @tf.function
 def sgns_likelihood(embedding, i, j, x=None):
     rhos, alphas = embedding[i], embedding[j]
-    logits = tf.reduce_sum(tf.multiply(embedding[i], embedding[j]), axis=-1)
-    
+    logits = tf.reduce_sum(tf.multiply(rhos, alphas), axis=-1)
+
     # If x is provided, multiply logits by it
     if x is not None:
         # Map 1 => 1, 0 => -1
@@ -14,7 +14,7 @@ def sgns_likelihood(embedding, i, j, x=None):
 
     ps = tf.math.sigmoid(logits)
     log_ps = tf.math.log(ps)
-    return tf.reduce_sum(log_ps)
+    return log_ps
     
 # Generate a random i,j batch of the data.
 #@tf.function
