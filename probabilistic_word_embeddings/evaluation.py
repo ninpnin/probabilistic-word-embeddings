@@ -16,6 +16,7 @@ import pandas as pd
 import pkg_resources
 from scipy.spatial.distance import cosine as cos_dist
 from scipy.stats import spearmanr as rank_correlation
+import tensorflow as tf
 
 ###################
 # WORD SIMILARITY #
@@ -26,16 +27,25 @@ def get_eval_file(dataset_name):
     return pd.read_csv(stream, sep='\t', names=["word1", "word2", "similarity"])
 
 def embedding_similarities(df, embedding):
+    words1, words2 = [], []
     rows = []
-    for _, row in df.iterrows():
-        word1, word2 = row["word1"], row["word2"]
+    for word1, word2 in progressbar.progressbar(zip(df["word1"], df["word2"])):
         if word1 in embedding and word2 in embedding:
-            similarity = 1. - cos_dist(embedding[word1], embedding[word2])
-            rows.append([word1, word2, similarity])
+            words1.append(word1)
+            words2.append(word2)
         else:
             rows.append([word1, word2, None])
 
-    return pd.DataFrame(rows, columns=["word1", "word2", "similarity"]) 
+    embeddings1 = embedding[words1]
+    embeddings2 = embedding[words2]
+    dots = tf.reduce_sum(tf.multiply(embeddings1, embeddings2), axis=-1)
+    norms1 = tf.sqrt(tf.reduce_sum(tf.multiply(embeddings1, embeddings1), axis=-1))
+    norms2 = tf.sqrt(tf.reduce_sum(tf.multiply(embeddings2, embeddings2), axis=-1))
+
+    similarities = dots / (norms1 * norms2)
+    df = pd.DataFrame({"word1": words1, "word2": words2, "similarity": similarities}) 
+    df_na = pd.DataFrame(rows, columns=["word1", "word2", "similarity"])
+    return pd.concat([df, df_na])
 
 def word_similarity_datasets():
     return ["Card-660", "MC-30", "MEN-TR-3k", "MTurk-287", "MTurk-771", "RG-65", "RW-STANFORD", "SimLex999", "SimVerb-3500", "WS-353-ALL", "WS-353-REL", "WS-353-SIM", "YP-130"]
@@ -50,12 +60,12 @@ def evaluate_word_similarity(embedding, dataset_names=None):
         embedding_df = embedding_df.dropna()
 
         merged_df = pd.merge(eval_df, embedding_df, on=["word1", "word2"])
-        corr, _ = rank_correlation(merged_df["similarity_x"], merged_df["similarity_y"])
+        corr, p_value = rank_correlation(merged_df["similarity_x"], merged_df["similarity_y"])
 
-        rows.append([dataset, corr, len(merged_df)])
+        rows.append([dataset, corr, len(merged_df), p_value])
         print(f"Rank Correlation {corr}")
 
-    return pd.DataFrame(rows, columns=["Dataset", "Rank Correlation", "No. of Observations"])
+    return pd.DataFrame(rows, columns=["Dataset", "Rank Correlation", "No. of Observations", "p-value"])
 
 
 
