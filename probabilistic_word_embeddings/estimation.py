@@ -3,6 +3,7 @@ import tensorflow as tf
 # Load model from models.py
 from .utils import shuffled_indices
 from .models import generate_sgns_batch, sgns_likelihood
+from .models import generate_cbow_batch, cbow_likelihood
 from .evaluation import evaluate_word_similarity
 
 import glob

@@ -15,6 +15,22 @@ def sgns_likelihood(embedding, i, j, x=None):
     ps = tf.math.sigmoid(logits)
     log_ps = tf.math.log(ps)
     return log_ps
+
+@tf.function
+def cbow_likelihood(embedding, i, j, x=None):
+    rhos, alphas = embedding[i], embedding[j]
+    alphas = tf.reduce_sum(alphas, axis=-2)
+    logits = tf.reduce_sum(tf.multiply(rhos, alphas), axis=-1)
+
+    # If x is provided, multiply logits by it
+    if x is not None:
+        # Map 1 => 1, 0 => -1
+        x = 2 * x - 1
+        logits = tf.multiply(logits, x)
+
+    ps = tf.math.sigmoid(logits)
+    log_ps = tf.math.log(ps)
+    return log_ps
     
 # Generate a random i,j batch of the data.
 #@tf.function
@@ -31,7 +47,9 @@ def generate_sgns_batch(data, ws=5, ns=5, batch=150000, start_ix=0, dataset_ix=0
 # Generate a random i,j batch of the data.
 def generate_cbow_batch(data, ws=5, ns=5, batch=150000, start_ix=0, dataset_ix=0):
     #settings = tf.constant([ws, ns, batch, start_ix, dataset_ix])
-    return _generate_cbow_batch(data, tf.constant(ws), tf.constant(ns), tf.constant(batch), tf.constant(start_ix))
+    i,j = _generate_cbow_batch(data, tf.constant(ws), tf.constant(ns), tf.constant(batch), tf.constant(start_ix))
+    x = tf.concat([tf.ones(batch, dtype=tf.float64), tf.zeros(ns * batch, dtype=tf.float64)], axis=0,)
+    return i,j,x
 
 @tf.function
 def _generate_cbow_batch(data, ws, ns, batch, start_ix):

@@ -19,7 +19,7 @@ print(similarity)
 
 
 # Perform MAP estimation
-e = map_estimate(e, text, model="sgns", ws=2, epochs=25)
+e = map_estimate(e, text, model="cbow", ws=2, epochs=25)
 
 similarity = evaluate_word_similarity(e)
 print(similarity)
