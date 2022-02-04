@@ -67,21 +67,6 @@ def dict_to_tf(d):
     )
     return table
 
-# Side-information
-def dynamic_si(si_path, d_folder="fits/"):
-    d_filename = d_folder + "dictionary.pkl"
-    d = pickle.load(open(d_filename, "rb"))
-
-    word_dict = {}
-    f = open(si_path, "r")
-    for line in f:
-        s = line.split()
-        key, value = s[0], float(s[1])
-        key = d[key]
-        word_dict[key] = value
-
-    return word_dict
-
 # Combined function x : c(x) = b(a(x))
 def transitive_dict(a, b):
     c = {}
@@ -92,10 +77,3 @@ def transitive_dict(a, b):
             c[key_a] = b[key_b]
         
     return c
-
-def inverse_dict(d):
-    assert len(set(d.keys())) == len(set(d.values())), "Not invertible"
-    inv_d = {v: k for k, v in d.items()}
-
-    return inv_d
-    
