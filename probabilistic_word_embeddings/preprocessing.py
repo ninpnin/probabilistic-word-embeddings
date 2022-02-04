@@ -6,12 +6,8 @@ def filter_rare_words(data, limit=5):
     counts = {}
     for wd in data:
         counts[wd] = counts.get(wd, 0) + 1
-
-    outdata = []
-    for wd in data:
-        if counts[wd] >= limit:
-            outdata.append(wd)
-
+        
+    outdata = [wd for wd in data if counts[wd] >= limit]
     return outdata, counts
 
 # Discard words with the probability of 1 - sqrt(10^-5 / freq)
@@ -33,11 +29,7 @@ def downsample_common_words(data, counts, cutoff=0.00001):
     kepts = rands > probs
     indices = tf.where(kepts)
     newdata = tf.gather_nd(data, indices)
-
-    #newdata.numpy().tolist()
-
-    newdata = [wd.decode("utf-8") for wd in newdata.numpy()]
-    return newdata
+    return [wd.decode("utf-8") for wd in newdata.numpy()]
 
 def preprocess_standard(text):
     text, counts = filter_rare_words(text)
