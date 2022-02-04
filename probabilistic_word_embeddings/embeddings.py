@@ -28,9 +28,6 @@ class Embedding:
             item = tf.constant(item)
         ix = self.tf_vocabulary.lookup(item)
         return tf.gather(self.theta, ix, axis=0)
-
-    def __len__(self):
-        return len(self.theta)
     
     def __contains__(self, key):
         if type(key) == str:
