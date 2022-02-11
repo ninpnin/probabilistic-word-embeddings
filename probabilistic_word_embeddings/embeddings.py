@@ -11,13 +11,19 @@ class Embedding:
     def __init__(self, vocabulary, dimensionality, lambda0=1.0, shared_context_vectors=True):
         assert isinstance(vocabulary, set)
         keys = list(vocabulary)
-        if shared_context_vectors:
+        if not shared_context_vectors:
             keys = keys + list(set([key + "_c" for key in keys]))
+            self.vocabulary = {wd: ix for ix, wd in enumerate(sorted(keys))}
         else:
-            keys = keys + list(set([key.split("_")[0] + "_c" for key in keys]))
-        self.vocabulary = {wd: ix for ix, wd in enumerate(sorted(keys))}
+            context_keys = {key + "_c": key.split("_")[0] + "_c" for key in keys}
+            all_indices = {key: ix for ix, key in enumerate(list(keys) + list(set(context_keys.values())))}
+            word_dict = {key: all_indices[key] for key in keys}
+            context_dict = {key: all_indices[value] for key, value in context_keys.items()}
+            self.vocabulary = {**word_dict, **context_dict}
+            assert max(self.vocabulary.values()) + 1 == len(set(context_dict.values())) + len(keys)
+        unique_parameters = len(set(self.vocabulary.values()))
         self.tf_vocabulary = dict_to_tf(self.vocabulary)
-        self.theta = tf.Variable(np.random.rand(len(keys), dimensionality) - 0.5, dtype=tf.float64)
+        self.theta = tf.Variable(np.random.rand(unique_parameters, dimensionality) - 0.5, dtype=tf.float64)
         self.lambda0 = lambda0
 
     @tf.function
