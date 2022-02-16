@@ -17,9 +17,8 @@ estimate_df = embedding_similarities(eval_df, e)
 similarity = evaluate_word_similarity(e)
 print(similarity)
 
-
 # Perform MAP estimation
-e = map_estimate(e, text, model="cbow", ws=2, epochs=25)
+e = map_estimate(e, text, model="cbow", ws=5, epochs=15)
 
 similarity = evaluate_word_similarity(e)
 print(similarity)

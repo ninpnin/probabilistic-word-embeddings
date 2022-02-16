@@ -23,7 +23,7 @@ class Embedding:
             assert max(self.vocabulary.values()) + 1 == len(set(context_dict.values())) + len(keys)
         unique_parameters = len(set(self.vocabulary.values()))
         self.tf_vocabulary = dict_to_tf(self.vocabulary)
-        self.theta = tf.Variable(np.random.rand(unique_parameters, dimensionality) - 0.5, dtype=tf.float64)
+        self.theta = tf.Variable((np.random.rand(unique_parameters, dimensionality)- 0.5)/dimensionality, dtype=tf.float64)
         self.lambda0 = lambda0
 
     @tf.function
@@ -42,5 +42,5 @@ class Embedding:
         return ix != -1
 
     def log_prob(self, batch_size, data_size):
-        plain_loss = - tf.reduce_sum(tf.multiply(self.theta, self.theta)) * self.lambda0
+        plain_loss = - 0.5 * tf.reduce_sum(tf.multiply(self.theta, self.theta)) * self.lambda0
         return (batch_size / data_size) * plain_loss
