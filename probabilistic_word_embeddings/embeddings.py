@@ -44,3 +44,23 @@ class Embedding:
     def log_prob(self, batch_size, data_size):
         plain_loss = - 0.5 * tf.reduce_sum(tf.multiply(self.theta, self.theta)) * self.lambda0
         return (batch_size / data_size) * plain_loss
+
+class LaplacianEmbedding(Embedding):
+    def __init__(self, vocabulary, dimensionality, graph, lambda0=1.0, lambda1=1.0, shared_context_vectors=True):
+        self.lambda1 = lambda1
+        self.graph = graph
+        super().__init__(vocabulary, dimensionality, lambda0=lambda0, shared_context_vectors=shared_context_vectors)
+
+    def log_prob(self, batch_size, data_size):
+        g = self.graph
+        triple = [(e_i, e_j, g[e_i][e_j].get("weight", 1.0)) for e_i, e_j in g.edges]
+        edges_i, edges_j, weights = zip(*triple)
+        edges_i, edges_j = tf.constant(edges_i), tf.constant(edges_j)
+        weights = tf.constant(weights, dtype=tf.float64) * self.lambda1
+        theta_i, theta_j = self[edges_i], self[edges_j]
+        diffs = theta_i - theta_j
+        squared_diffs = tf.reduce_sum(tf.multiply(diffs, diffs), axis=-1)
+        weighted_diff_sum = tf.reduce_sum(tf.multiply(squared_diffs, weights))
+        diagonal_sum = tf.reduce_sum(tf.multiply(self.theta, self.theta)) * self.lambda0
+        plain_loss = - 0.5 * (diagonal_sum + weighted_diff_sum)
+        return (batch_size / data_size) * plain_loss
