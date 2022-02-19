@@ -1,11 +1,10 @@
 import tensorflow as tf
 
 # Bernoulli Skip-Gram with Negative Samples
-@tf.function
+#@tf.function
 def sgns_likelihood(embedding, i, j, x=None):
     rhos, alphas = embedding[i], embedding[j]
     logits = tf.reduce_sum(tf.multiply(rhos, alphas), axis=-1)
-
     # If x is provided, multiply logits by it
     if x is not None:
         # Map 1 => 1, 0 => -1

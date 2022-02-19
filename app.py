@@ -18,7 +18,7 @@ similarity = evaluate_word_similarity(e)
 print(similarity)
 
 # Perform MAP estimation
-e = map_estimate(e, text, model="cbow", ws=5, epochs=15)
+e = map_estimate(e, text, model="sgns", batch_size=10000, ws=5, epochs=15)
 
 similarity = evaluate_word_similarity(e)
 print(similarity)

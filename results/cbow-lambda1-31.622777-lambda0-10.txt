@@ -1,0 +1,1 @@
+python3 laplacian.py --batch_size 25000 --lambda1 31.622777 --lambda0 10

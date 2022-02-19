@@ -1,0 +1,1 @@
+python3 laplacian.py --lambda1 7.0 --lambda0 0.01 --epochs 75 --batch_size 15000 --likelihood sgns

@@ -1,0 +1,35 @@
+Discard some instances of the most common words...
+Train on a text of length 14274812 with a vocabulary size of 133494
+Epoch 1
+         Dataset  Rank Correlation  No. of Observations   p-value
+0       Card-660         -0.008454                  101  0.933129
+1          MC-30          0.172007                   30  0.363408
+2      MEN-TR-3k          0.041836                 3000  0.021935
+3      MTurk-287          0.148211                  285  0.012247
+4      MTurk-771          0.013205                  771  0.714309
+5          RG-65          0.173509                   65  0.166897
+6    RW-STANFORD         -0.039333                 1268  0.161586
+7      SimLex999         -0.066332                  995  0.036435
+8   SimVerb-3500         -0.007522                 3392  0.661418
+9     WS-353-ALL          0.035653                  337  0.514224
+10    WS-353-REL          0.033952                  238  0.602239
+11    WS-353-SIM         -0.014552                  196  0.839572
+12        YP-130          0.172075                  124  0.056002
+Weighted average 0.008396919405956889
+Epoch 2
+         Dataset  Rank Correlation  No. of Observations       p-value
+0       Card-660         -0.083028                  101  4.091073e-01
+1          MC-30          0.332666                   30  7.246035e-02
+2      MEN-TR-3k          0.158751                 3000  2.190330e-18
+3      MTurk-287          0.121354                  285  4.063231e-02
+4      MTurk-771          0.147022                  771  4.167055e-05
+5          RG-65          0.199867                   65  1.104301e-01
+6    RW-STANFORD          0.174328                 1268  4.119105e-10
+7      SimLex999          0.106436                  995  7.717860e-04
+8   SimVerb-3500          0.023705                 3392  1.675010e-01
+9     WS-353-ALL          0.330660                  337  4.862645e-10
+10    WS-353-REL          0.154118                  238  1.734436e-02
+11    WS-353-SIM          0.371172                  196  8.521321e-08
+12        YP-130          0.081002                  124  3.711423e-01
+Weighted average 0.11822286199723388
+Epoch 3
