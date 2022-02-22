@@ -11,7 +11,7 @@ import progressbar
 from scipy.spatial.distance import cosine as cos_dist
 from sklearn.utils import shuffle
 
-def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, profile=False, history=False):
+def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, profile=False, history=False):
     """
     This function performs MAP estimation.
 
@@ -36,9 +36,10 @@ def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, ep
     for epoch in range(epochs):
         print(f"Epoch {epoch}")
         
-        similarity = evaluate_word_similarity(embedding)
-        print(similarity)
-        wa = sum(similarity["Rank Correlation"] * similarity["No. of Observations"]) / sum(similarity["No. of Observations"])
+        if evaluate:
+            similarity = evaluate_word_similarity(embedding)
+            print(similarity)
+            wa = sum(similarity["Rank Correlation"] * similarity["No. of Observations"]) / sum(similarity["No. of Observations"])
         
         print("Weighted average", wa)
 
