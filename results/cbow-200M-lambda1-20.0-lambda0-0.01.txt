@@ -1,0 +1,1 @@
+python3 -u laplacian.py --likelihood cbow --lambda1 20.0 --lambda0 0.1 --batch_size 15000 --epochs 25
