@@ -41,7 +41,7 @@ def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, ep
             print(similarity)
             wa = sum(similarity["Rank Correlation"] * similarity["No. of Observations"]) / sum(similarity["No. of Observations"])
         
-        print("Weighted average", wa)
+            print("Weighted average", wa)
 
         for batch in progressbar.progressbar(shuffle(list(range(batches)))):
             start_ix = batch_size * batch

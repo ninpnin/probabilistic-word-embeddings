@@ -29,7 +29,7 @@ def get_eval_file(dataset_name):
 def embedding_similarities(df, embedding):
     words1, words2 = [], []
     rows = []
-    for word1, word2 in progressbar.progressbar(zip(df["word1"], df["word2"])):
+    for word1, word2 in zip(df["word1"], df["word2"]):
         if word1 in embedding and word2 in embedding:
             words1.append(word1)
             words2.append(word2)
@@ -63,7 +63,7 @@ def evaluate_word_similarity(embedding, dataset_names=None):
         corr, p_value = rank_correlation(merged_df["similarity_x"], merged_df["similarity_y"])
 
         rows.append([dataset, corr, len(merged_df), p_value])
-        print(f"Rank Correlation {corr}")
+        #print(f"Rank Correlation {corr}")
 
     return pd.DataFrame(rows, columns=["Dataset", "Rank Correlation", "No. of Observations", "p-value"])
 
