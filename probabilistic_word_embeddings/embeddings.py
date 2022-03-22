@@ -3,7 +3,7 @@ Definitions of the prior distributions of the embeddings.
 """
 import numpy as np
 import tensorflow as tf
-import random
+import random, pickle
 import progressbar
 from .utils import dict_to_tf
 
@@ -45,6 +45,12 @@ class Embedding:
         plain_loss = - 0.5 * tf.reduce_sum(tf.multiply(self.theta, self.theta)) * self.lambda0
         return (batch_size / data_size) * plain_loss
 
+    def save(self, path):
+        theta = self.theta.numpy()
+        o = (theta, self.vocabulary)
+        with open(path, "wb") as f:
+            pickle.dump(o, f)
+
 class LaplacianEmbedding(Embedding):
     def __init__(self, vocabulary, dimensionality, graph, lambda0=1.0, lambda1=1.0, shared_context_vectors=True):
         self.lambda1 = lambda1
@@ -64,3 +70,11 @@ class LaplacianEmbedding(Embedding):
         diagonal_sum = tf.reduce_sum(tf.multiply(self.theta, self.theta)) * self.lambda0
         plain_loss = - 0.5 * (diagonal_sum + weighted_diff_sum)
         return (batch_size / data_size) * plain_loss
+
+class SavedEmbedding(Embedding):
+    def __init__(self, path):
+        with open(path, "rb") as f:
+            theta, vocabulary = pickle.load(f)
+        self.vocabulary = vocabulary
+        self.tf_vocabulary = dict_to_tf(self.vocabulary)
+        self.theta = tf.Variable(theta)
