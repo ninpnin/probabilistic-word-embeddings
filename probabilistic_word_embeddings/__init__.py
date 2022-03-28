@@ -68,5 +68,3 @@ print("Great",    "last dim", "t0", great0)
 print("Terrible", "last dim", "t1", terrible1)
 ```
 """
-from probabilistic_word_embeddings.laplacian_utils import create_laplacian
-from probabilistic_word_embeddings.preprocessing import preprocess
