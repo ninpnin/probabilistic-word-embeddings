@@ -8,7 +8,7 @@ import progressbar
 from .utils import dict_to_tf
 
 class Embedding:
-    def __init__(self, vocabulary, dimensionality, lambda0=1.0, shared_context_vectors=True):
+    def __init__(self, vocabulary=None, dimensionality=100, lambda0=1.0, shared_context_vectors=True):
         assert isinstance(vocabulary, set)
         keys = list(vocabulary)
         if not shared_context_vectors:
@@ -47,15 +47,33 @@ class Embedding:
 
     def save(self, path):
         theta = self.theta.numpy()
-        o = (theta, self.vocabulary)
+        d = {}
+        d["theta"] = theta
+        d["vocabulary"] = self.vocabulary
+        d["lambda0"] = self.lambda0
+        if hasattr(self, 'lambda1'):
+            d["lambda1"] = self.lambda1
+        if hasattr(self, 'graph'):
+            d["graph"] = self.graph
+
         with open(path, "wb") as f:
-            pickle.dump(o, f)
+            pickle.dump(d, f)
 
 class LaplacianEmbedding(Embedding):
-    def __init__(self, vocabulary, dimensionality, graph, lambda0=1.0, lambda1=1.0, shared_context_vectors=True):
-        self.lambda1 = lambda1
-        self.graph = graph
-        super().__init__(vocabulary, dimensionality, lambda0=lambda0, shared_context_vectors=shared_context_vectors)
+    def __init__(self, vocabulary=None, dimensionality=100, graph=None, lambda0=1.0, lambda1=1.0, shared_context_vectors=True, saved_model_path=None):
+        if saved_model_path is None:
+            self.lambda1 = lambda1
+            self.graph = graph
+            super().__init__(vocabulary, dimensionality, lambda0=lambda0, shared_context_vectors=shared_context_vectors)
+        else:
+            with open(saved_model_path, "rb") as f:
+                d = pickle.load(f)
+            self.vocabulary = d["vocabulary"]
+            self.tf_vocabulary = dict_to_tf(self.vocabulary)
+            self.theta = tf.Variable(d["theta"])
+            self.lambda0 = d["lambda0"]
+            self.lambda1 = d["lambda1"]
+            self.graph = d["graph"]
 
     def log_prob(self, batch_size, data_size):
         g = self.graph
@@ -70,11 +88,3 @@ class LaplacianEmbedding(Embedding):
         diagonal_sum = tf.reduce_sum(tf.multiply(self.theta, self.theta)) * self.lambda0
         plain_loss = - 0.5 * (diagonal_sum + weighted_diff_sum)
         return (batch_size / data_size) * plain_loss
-
-class SavedEmbedding(Embedding):
-    def __init__(self, path):
-        with open(path, "rb") as f:
-            theta, vocabulary = pickle.load(f)
-        self.vocabulary = vocabulary
-        self.tf_vocabulary = dict_to_tf(self.vocabulary)
-        self.theta = tf.Variable(theta)
