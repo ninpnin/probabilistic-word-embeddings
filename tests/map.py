@@ -39,15 +39,12 @@ class Test(unittest.TestCase):
                 t = f.read().lower().split()
                 texts.append(t)
 
-        
-        texts, vocabulary = preprocess_standard(texts)
-
-        def append_suffix(text, suffix):
-            return [wd + "_" + suffix for wd in text]
-        texts = [append_suffix(text, name) for name, text in zip(names, texts)]
-
-        print(texts[0][:10])
-        print(texts[1][:10])
+        texts, vocabulary = preprocess_dynamic(texts)
+        text = []
+        for name, t in zip(names, texts):
+            for wd in t:
+                text.append(wd + "_" + name)
+        vocabulary = set(text)
 
         vocab_size = len(vocabulary)
         batch_size = 250
@@ -58,9 +55,6 @@ class Test(unittest.TestCase):
         theta = e.theta.numpy()
         self.assertEqual(type(theta), np.ndarray)
 
-        theta_shape = theta.shape
-        valid_shape = (vocab_size * 2 * len(texts), dim)
-        self.assertEqual(theta_shape, valid_shape)
     
 
 if __name__ == '__main__':
