@@ -7,11 +7,14 @@ from probabilistic_word_embeddings.evaluation import get_eval_file, embedding_si
 import tensorflow as tf
 import numpy as np
 from pathlib import Path
+import random
 
 class Test(unittest.TestCase):
 
-    # Test MAP estimation with random data
     def test_map(self):
+        """
+        Test MAP estimation with example dataset
+        """
         with open("tests/data/0.txt") as f:
             text = f.read().lower().split()
         text, vocabulary = preprocess_standard(text)
@@ -29,7 +32,11 @@ class Test(unittest.TestCase):
         valid_shape = (vocab_size * 2, dim)
         self.assertEqual(theta_shape, valid_shape)
 
-    
+        K = 23
+        words = random.choices(text, k=K)
+        embeddings = e[words]
+        self.assertEqual(embeddings.shape, (K, dim))
+
     def test_dynamic_map(self):
         paths = sorted(list(Path("tests/data/").glob("*.txt")))
         names, texts = [], []
@@ -54,6 +61,11 @@ class Test(unittest.TestCase):
         e = map_estimate(e, text, evaluate=False, epochs=1)
         theta = e.theta.numpy()
         self.assertEqual(type(theta), np.ndarray)
+
+        K = 23
+        words = random.choices(text, k=K)
+        embeddings = e[words]
+        self.assertEqual(embeddings.shape, (K, dim))
 
     
 
