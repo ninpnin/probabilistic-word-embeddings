@@ -24,4 +24,5 @@ jobs:
     - name: Test with unittest
       run: |
         python -m unittest tests.map
+        python -m unittest tests.embeddings
 
