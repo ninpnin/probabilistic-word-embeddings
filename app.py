@@ -7,7 +7,8 @@ import tensorflow as tf
 
 eval_df = get_eval_file("MC-30")
 print(eval_df)
-text = open("wiki.txt").read().lower().split()
+with open("wiki.txt") as f:
+	text = f.read().lower().split()
 text, vocabulary = preprocess_standard(text)
 print(f"Train on a text of length {len(text)} with a vocabulary size of {len(vocabulary)}")
 

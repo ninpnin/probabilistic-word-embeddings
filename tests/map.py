@@ -11,7 +11,8 @@ class Test(unittest.TestCase):
 
     # Test MAP estimation with random data
     def test_map(self):
-        text = open("tests/data/0.txt").read().lower().split()
+        with open("tests/data/0.txt") as f:
+            text = f.read().lower().split()
         text, vocabulary = preprocess_standard(text)
 
         vocab_size = len(vocabulary)
