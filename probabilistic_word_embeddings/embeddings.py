@@ -9,23 +9,31 @@ from .utils import dict_to_tf
 import warnings
 
 class Embedding:
-    def __init__(self, vocabulary=None, dimensionality=100, lambda0=1.0, shared_context_vectors=True):
-        assert isinstance(vocabulary, set)
-        keys = list(vocabulary)
-        if not shared_context_vectors:
-            keys = keys + list(set([key + "_c" for key in keys]))
-            self.vocabulary = {wd: ix for ix, wd in enumerate(sorted(keys))}
+    def __init__(self, vocabulary=None, dimensionality=100, lambda0=1.0, shared_context_vectors=True, saved_model_path=None):
+        if saved_model_path is None:
+            assert isinstance(vocabulary, set)
+            keys = list(vocabulary)
+            if not shared_context_vectors:
+                keys = keys + list(set([key + "_c" for key in keys]))
+                self.vocabulary = {wd: ix for ix, wd in enumerate(sorted(keys))}
+            else:
+                context_keys = {key + "_c": key.split("_")[0] + "_c" for key in keys}
+                all_indices = {key: ix for ix, key in enumerate(list(keys) + list(set(context_keys.values())))}
+                word_dict = {key: all_indices[key] for key in keys}
+                context_dict = {key: all_indices[value] for key, value in context_keys.items()}
+                self.vocabulary = {**word_dict, **context_dict}
+                assert max(self.vocabulary.values()) + 1 == len(set(context_dict.values())) + len(keys)
+            unique_parameters = len(set(self.vocabulary.values()))
+            self.tf_vocabulary = dict_to_tf(self.vocabulary)
+            self.theta = tf.Variable((np.random.rand(unique_parameters, dimensionality)- 0.5)/dimensionality, dtype=tf.float64)
+            self.lambda0 = lambda0
         else:
-            context_keys = {key + "_c": key.split("_")[0] + "_c" for key in keys}
-            all_indices = {key: ix for ix, key in enumerate(list(keys) + list(set(context_keys.values())))}
-            word_dict = {key: all_indices[key] for key in keys}
-            context_dict = {key: all_indices[value] for key, value in context_keys.items()}
-            self.vocabulary = {**word_dict, **context_dict}
-            assert max(self.vocabulary.values()) + 1 == len(set(context_dict.values())) + len(keys)
-        unique_parameters = len(set(self.vocabulary.values()))
-        self.tf_vocabulary = dict_to_tf(self.vocabulary)
-        self.theta = tf.Variable((np.random.rand(unique_parameters, dimensionality)- 0.5)/dimensionality, dtype=tf.float64)
-        self.lambda0 = lambda0
+            with open(saved_model_path, "rb") as f:
+                d = pickle.load(f)
+            self.vocabulary = d["vocabulary"]
+            self.tf_vocabulary = dict_to_tf(self.vocabulary)
+            self.theta = tf.Variable(d["theta"])
+            self.lambda0 = d["lambda0"]
 
     @tf.function
     def __getitem__(self, item):
