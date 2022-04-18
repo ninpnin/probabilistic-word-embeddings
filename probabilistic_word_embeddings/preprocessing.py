@@ -3,17 +3,31 @@ import tensorflow as tf
 from .utils import dict_to_tf, transitive_dict
 
 def filter_rare_words(data, limit=5):
+    """
+    Filter out words that only occur a handful of times
+    """
     counts = {}
-    for wd in data:
-        counts[wd] = counts.get(wd, 0) + 1
-        
-    outdata = [wd for wd in data if counts[wd] >= limit]
+    if isinstance(data[0], list):
+        for dataset in data:
+            for wd in dataset:
+                counts[wd] = counts.get(wd, 0) + 1
+
+        outdata = []
+        for dataset in data:
+            outdataset = [wd for wd in dataset if counts[wd] >= limit]
+            outdata.append(outdataset)
+    else:
+        for wd in data:
+            counts[wd] = counts.get(wd, 0) + 1
+            
+        outdata = [wd for wd in data if counts[wd] >= limit]
     return outdata, counts
 
-# Discard words with the probability of 1 - sqrt(10^-5 / freq)
-# Initially proposed by Mikolov et al. (2013)
-#@tf.function
 def downsample_common_words(data, counts, cutoff=0.00001):
+    """
+    Discard words with the probability of 1 - sqrt(10^-5 / freq)
+    Initially proposed by Mikolov et al. (2013)
+    """
     if not isinstance(data, tf.Tensor):
         data = tf.constant(data)
 
@@ -37,3 +51,10 @@ def preprocess_standard(text):
 
     vocabulary = set(text)
     return text, vocabulary
+
+def preprocess_dynamic(texts):
+    texts, counts = filter_rare_words(texts)
+    #texts = [downsample_common_words(text, counts) for text in texts]
+
+    vocabulary = set({wd for wd, count in counts.items() if count >= 5})
+    return texts, vocabulary
