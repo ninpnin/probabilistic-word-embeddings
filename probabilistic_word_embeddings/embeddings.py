@@ -6,6 +6,7 @@ import tensorflow as tf
 import random, pickle
 import progressbar
 from .utils import dict_to_tf
+import warnings
 
 class Embedding:
     def __init__(self, vocabulary=None, dimensionality=100, lambda0=1.0, shared_context_vectors=True):
@@ -63,6 +64,12 @@ class LaplacianEmbedding(Embedding):
     def __init__(self, vocabulary=None, dimensionality=100, graph=None, lambda0=1.0, lambda1=1.0, shared_context_vectors=True, saved_model_path=None):
         if saved_model_path is None:
             self.lambda1 = lambda1
+            for wd in list(graph.nodes):
+                if wd in graph.nodes and wd not in vocabulary:
+                    graph.remove_node(wd)
+                    omitted_word_warning = f"'{wd}' does not exist in embedding vocabulary and will be omitted."
+                    warnings.warn(omitted_word_warning)
+
             self.graph = graph
             super().__init__(vocabulary, dimensionality, lambda0=lambda0, shared_context_vectors=shared_context_vectors)
         else:
