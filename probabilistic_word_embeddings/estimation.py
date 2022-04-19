@@ -9,7 +9,7 @@ from .evaluation import evaluate_word_similarity
 import glob
 import progressbar
 from scipy.spatial.distance import cosine as cos_dist
-from sklearn.utils import shuffle
+import random
 
 def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, profile=False, history=False):
     """
@@ -43,7 +43,8 @@ def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, ep
         
             print("Weighted average", wa)
 
-        for batch in progressbar.progressbar(shuffle(list(range(batches)))):
+        # Shuffle the order of batches
+        for batch in progressbar.progressbar(random.sample(range(batches),batches)):
             start_ix = batch_size * batch
             if model == "sgns":
                 i,j,x  = generate_sgns_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix)
