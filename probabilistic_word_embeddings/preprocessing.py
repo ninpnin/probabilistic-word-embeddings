@@ -21,6 +21,7 @@ def filter_rare_words(data, limit=5):
             counts[wd] = counts.get(wd, 0) + 1
             
         outdata = [wd for wd in data if counts[wd] >= limit]
+    counts = {wd: count for wd, count in counts.items() if count >= limit}
     return outdata, counts
 
 def downsample_common_words(data, counts, cutoff=0.00001):
