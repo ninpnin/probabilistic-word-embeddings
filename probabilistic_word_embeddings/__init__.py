@@ -5,66 +5,58 @@ We strive to keep all functionality clear, concise and easy to use.
 For instance, MAP estimation of the basic Bernoulli Embeddings only requires a couple of lines of code:
 
 ```py
-from probabilistic_word_embeddings.eval import wordsim
-from probabilistic_word_embeddings import preprocess
-from probabilistic_word_embeddings.models import init_cbow
+from probabilistic_word_embeddings.embeddings import Embedding
+from probabilistic_word_embeddings.preprocessing import preprocess_standard
 from probabilistic_word_embeddings.estimation import map_estimate
+from probabilistic_word_embeddings.evaluation import get_eval_file, embedding_similarities, evaluate_word_similarity
+import tensorflow as tf
 
-# Reads all files from datapath.
-datapath = "raw/static/"
-data, vocab = preprocess(datapath)
-vocab_size = max(vocab.values()) + 1
+with open("wiki.txt") as f:
+    text = f.read().lower().split()
+text, vocabulary = preprocess_standard(text)
 
-cbow = init_cbow(lambda0=30.0, vocab_size=vocab_size, dim=100, batch_size=2000)
-theta_history = map_estimate(cbow, data)
+e = Embedding(vocabulary=vocabulary, dimensionality=100)
 
-# Get value of theta at last training epoch
-theta_last = theta_history[-1][0]
-rhos = theta_last[0][:V]
+# Perform MAP estimation
+e = map_estimate(e, text, model="cbow", ws=5, epochs=15)
 
-results = wordsim(rhos, d)
-print(results)
+# Evaluate performance on word similarity tasks
+similarity = evaluate_word_similarity(e)
+print(similarity)
+
+# Save the embedding
+e.save("embeddings.pkl")
 ```
 
 The estimation of _dynamic_ Bernoulli embeddings is relatively straightforward, too.
 Additionally, informative priors can be added to trace shifts in word meaning:
 
 ```py
-from probabilistic_word_embeddings import preprocess
-from probabilistic_word_embeddings.models import init_dynamic_informative
+import networkx as nx
+from probabilistic_word_embeddings.embeddings import Embedding, LaplacianEmbedding
+from probabilistic_word_embeddings.preprocessing import preprocess_standard
 from probabilistic_word_embeddings.estimation import map_estimate
-from probabilistic_word_embeddings.utils import transitive_dict, inverse_dict
+from probabilistic_word_embeddings.evaluation import get_eval_file, embedding_similarities, evaluate_word_similarity
+from scipy.spatial.distance import cosine as cos_dist
+import tensorflow as tf
 
-# Reads all files from datapath. They should be in alphabetical order.
-datapath = "raw/dynamic/"
-data, vocab = preprocess(datapath, data_type="dynamic")
-timesteps = len(data)
+with open("wiki.txt") as f:
+    text = f.read().lower().split()
+text, vocabulary = preprocess_standard(text)
 
-inv_vocab = inverse_dict(vocab)
-vocab_size = max(vocab.values()) + 1
+g = nx.Graph()
+g.add_edge("this", "that")
+dim = 100
+e = LaplacianEmbedding(vocabulary, dim, g)
+# Perform MAP estimation
 
-# Add your SI in this format:
-si = {"good": 1.0, "bad": -1.0}
+e = map_estimate(e, text, model="cbow", ws=5, epochs=15)
 
-# Convert str->int in the side information dictionary
-si = transitive_dict(inv_vocab, si)
-# The keys are now the indices of the words {168: 1.0, 378: -1.0}
+# Evaluate performance on word similarity tasks
+similarity = evaluate_word_similarity(e)
+print(similarity)
 
-cbow = init_dynamic_informative(lambda0=30.0, vocab_size=vocab_size,
-	timesteps=timesteps, dim=100, si=si, batch_size=2000)
-theta_history = map_estimate(cbow, data, epochs=5)
-
-# Get value of theta at last training epoch
-theta_last = theta_history[-1][0]
-print("Shape of the embedding:", theta_last.shape)
-
-# Let's get some words
-great = 	vocab["great"]
-terrible = 	vocab["terrible"]
-great0 =  	theta_last[0, great, -1] 	# timestep=0, dim=-1
-terrible1 =	theta_last[1, terrible, -1] # timestep=1, dim=-1
-
-print("Great",    "last dim", "t0", great0)
-print("Terrible", "last dim", "t1", terrible1)
+# Save the embedding
+e.save("embeddings.pkl")
 ```
 """
