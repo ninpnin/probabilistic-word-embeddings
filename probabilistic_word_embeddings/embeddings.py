@@ -60,11 +60,13 @@ class Embedding:
     def log_prob(self, batch_size, data_size):
         """
         Calculate the log (prior) probability of the embedding taking its current value
-
-        :param batch_size: Batch size. Used to scale the log prob for the whole dataset.
-        :param data_size: Whole dataset size. Used to scale the log prob for the whole dataset.
-
-        :return: Log probability as 1D tensor as tf.EagerTensor
+        
+        Args:
+            batch_size: Batch size. Used to scale the log prob for the whole dataset.
+            data_size: Whole dataset size. Used to scale the log prob for the whole dataset.
+        
+        Returns:
+            Log probability as 1D tensor as tf.EagerTensor
         """
         plain_loss = - 0.5 * tf.reduce_sum(tf.multiply(self.theta, self.theta)) * self.lambda0
         return (batch_size / data_size) * plain_loss
@@ -72,8 +74,9 @@ class Embedding:
     def save(self, path):
         """
         Save embedding as a pickled file
-
-        :param path: Path where the embedding is saved to as a str.
+        
+        Args:
+            path: Path where the embedding is saved to as a str.
         """
         theta = self.theta.numpy()
         d = {}
@@ -118,11 +121,13 @@ class LaplacianEmbedding(Embedding):
     def log_prob(self, batch_size, data_size):
         """
         Calculate the log (prior) probability of the embedding taking its current value
-
-        :param batch_size: Batch size. Used to scale the log prob for the whole dataset.
-        :param data_size: Whole dataset size. Used to scale the log prob for the whole dataset.
-
-        :return: Log probability as tf.EagerTensor
+        
+        Args:
+            batch_size: Batch size. Used to scale the log prob for the whole dataset.
+            data_size: Whole dataset size. Used to scale the log prob for the whole dataset.
+        
+        Returns:
+            Log probability as tf.EagerTensor
         """
         g = self.graph
         triple = [(e_i, e_j, g[e_i][e_j].get("weight", 1.0)) for e_i, e_j in g.edges]

@@ -5,10 +5,12 @@ from .utils import dict_to_tf, transitive_dict
 def filter_rare_words(data, limit=5):
     """
     Filter out words that only occur a handful of times
-
-    :param data: list of strs
-
-    :return: tuple (data, counts); list of strs and word counts as a dict
+    
+    Args:
+        data: list of strs
+    
+    Returns:
+        data, counts: list of strs and word counts as a dict
     """
     counts = {}
     if isinstance(data[0], list):
@@ -32,12 +34,14 @@ def downsample_common_words(data, counts, cutoff=0.00001):
     """
     Discard words with the probability of 1 - sqrt(10^-5 / freq)
     Initially proposed by Mikolov et al. (2013)
-
-    :param data: list of strs or tf.Tensor of strings
-    :param counts: word counts as a dict
-    :param counts: lowest word frequency for when downsampling is applied, float
-
-    :return: list of strs
+    
+    Args:
+        data: list of strs or tf.Tensor of strings
+        counts: word counts as a dict
+        cutoff: lowest word frequency for when downsampling is applied, float
+    
+    Returns:
+        list of strs
     """
     if not isinstance(data, tf.Tensor):
         data = tf.constant(data)
@@ -60,9 +64,11 @@ def preprocess_standard(text):
     """
     Standard preprocessing: filter out rare (<=5 occurences) words, downsample common words.
 
-    :param text: text as a list of strs
+    Args:
+        text: text as a list of strs
 
-    :return: tuple (text, vocabulary); text as a list of strs, vocabulary as a set of strs
+    Returns:
+        text, vocabulary: text as a list of strs, vocabulary as a set of strs
     """
     text, counts = filter_rare_words(text)
     text = downsample_common_words(text, counts)
