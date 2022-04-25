@@ -23,7 +23,10 @@ import tensorflow as tf
 ###################
 
 def get_eval_file(dataset_name):
-    stream = pkg_resources.resource_stream(__name__, f'data/eval/{dataset_name}.tsv')
+    try:
+        stream = pkg_resources.resource_stream(__name__, f'data/eval/{dataset_name}.tsv')
+    except FileNotFoundError:
+        stream = open(dataset_name)
     return pd.read_csv(stream, sep='\t', names=["word1", "word2", "similarity"])
 
 def embedding_similarities(df, embedding):
