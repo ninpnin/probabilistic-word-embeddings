@@ -3,6 +3,7 @@ Definitions of the prior distributions of the embeddings.
 """
 import numpy as np
 import tensorflow as tf
+import networkx as nx
 import random, pickle
 import progressbar
 from .utils import dict_to_tf
@@ -11,7 +12,8 @@ import warnings
 class Embedding:
     def __init__(self, vocabulary=None, dimensionality=100, lambda0=1.0, shared_context_vectors=True, saved_model_path=None):
         if saved_model_path is None:
-            assert isinstance(vocabulary, set)
+            if not isinstance(vocabulary, set):
+                raise TypeError("vocabulary must be a set")
             keys = list(vocabulary)
             if not shared_context_vectors:
                 keys = keys + list(set([key + "_c" for key in keys]))
@@ -28,6 +30,8 @@ class Embedding:
             self.theta = tf.Variable((np.random.rand(unique_parameters, dimensionality)- 0.5)/dimensionality, dtype=tf.float64)
             self.lambda0 = lambda0
         else:
+            if type(saved_model_path) != str:
+                raise TypeError("saved_model_path must be a str")
             with open(saved_model_path, "rb") as f:
                 d = pickle.load(f)
             self.vocabulary = d["vocabulary"]
@@ -71,6 +75,8 @@ class Embedding:
 class LaplacianEmbedding(Embedding):
     def __init__(self, vocabulary=None, dimensionality=100, graph=None, lambda0=1.0, lambda1=1.0, shared_context_vectors=True, saved_model_path=None):
         if saved_model_path is None:
+            if type(graph) != nx.Graph:
+                raise TypeError("graph must be a nx.Graph")
             self.lambda1 = lambda1
             for wd in list(graph.nodes):
                 if wd in graph.nodes and wd not in vocabulary:
