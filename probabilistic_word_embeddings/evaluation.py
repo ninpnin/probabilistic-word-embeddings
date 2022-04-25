@@ -54,6 +54,13 @@ def word_similarity_datasets():
     return ["Card-660", "MC-30", "MEN-TR-3k", "MTurk-287", "MTurk-771", "RG-65", "RW-STANFORD", "SimLex999", "SimVerb-3500", "WS-353-ALL", "WS-353-REL", "WS-353-SIM", "YP-130"]
 
 def evaluate_word_similarity(embedding, dataset_names=None):
+    """
+    Evaluate embedding performance on word similarity tasks.
+
+    :param embedding: embedding as pwe.embeddings.Embedding
+    :param dataset_names: List of dataset names to evaluate on, as names or paths to TSV files.
+    If None, evaluate on all datasets that this module provides.
+    """
     if dataset_names is None:
         dataset_names = word_similarity_datasets()
     rows = []

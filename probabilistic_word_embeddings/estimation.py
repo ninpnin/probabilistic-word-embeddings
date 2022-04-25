@@ -13,15 +13,21 @@ import random
 
 def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, profile=False, history=False):
     """
-    This function performs MAP estimation.
+    Perform MAP estimation.
 
-    Args:
-        model: Word embedding model.
+    :param embedding: Embedding with a suitable vocabulary and log_prob function. Subclass of pwe.Embedding
+    :param model: Word embedding model.
 
-            The model is expected to have 'loss' and 'init' functions.
-        data: Data as a list of of NumPy arrays. The arrays should consist of word indices.
-        init: Variable parameters in the model as a list of tf.Variable's. If None, will be initialized from the models init function.
-        epochs: The number of passes over the data.
+        The model is expected to have 'loss' and 'init' functions.
+    :param data: Data as a list of of NumPy arrays. The arrays should consist of word indices.
+    :param ws: SGNS or CBOW window size
+    :param ns: SGNS or CBOW number of negative samples
+    :param batch_size: Batch size in the training process 
+    :param epochs: The number of passes over the data.
+    :param evaluate: Whether to run word similarity evaluation during training on the standard English evaluation data sets
+    :param profile: whether to run the tensorflow profiler during training
+    
+    :return: Trained embedding
     """
     if profile:
         tf.profiler.experimental.start("logs")

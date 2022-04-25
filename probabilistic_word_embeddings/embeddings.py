@@ -10,6 +10,9 @@ from .utils import dict_to_tf
 import warnings
 
 class Embedding:
+    '''
+    Generic class for probabilistic embeddings.
+    '''
     def __init__(self, vocabulary=None, dimensionality=100, lambda0=1.0, shared_context_vectors=True, saved_model_path=None):
         if saved_model_path is None:
             if not isinstance(vocabulary, set):
@@ -55,10 +58,23 @@ class Embedding:
         return ix != -1
 
     def log_prob(self, batch_size, data_size):
+        """
+        Calculate the log (prior) probability of the embedding taking its current value
+
+        :param batch_size: Batch size. Used to scale the log prob for the whole dataset.
+        :param data_size: Whole dataset size. Used to scale the log prob for the whole dataset.
+
+        :return: Log probability as 1D tensor as tf.EagerTensor
+        """
         plain_loss = - 0.5 * tf.reduce_sum(tf.multiply(self.theta, self.theta)) * self.lambda0
         return (batch_size / data_size) * plain_loss
 
     def save(self, path):
+        """
+        Save embedding as a pickled file
+
+        :param path: Path where the embedding is saved to as a str.
+        """
         theta = self.theta.numpy()
         d = {}
         d["theta"] = theta
@@ -73,6 +89,9 @@ class Embedding:
             pickle.dump(d, f)
 
 class LaplacianEmbedding(Embedding):
+    """
+    Probabilistic embedding with a Laplacian graph prior
+    """
     def __init__(self, vocabulary=None, dimensionality=100, graph=None, lambda0=1.0, lambda1=1.0, shared_context_vectors=True, saved_model_path=None):
         if saved_model_path is None:
             if type(graph) != nx.Graph:
@@ -97,6 +116,14 @@ class LaplacianEmbedding(Embedding):
             self.graph = d["graph"]
 
     def log_prob(self, batch_size, data_size):
+        """
+        Calculate the log (prior) probability of the embedding taking its current value
+
+        :param batch_size: Batch size. Used to scale the log prob for the whole dataset.
+        :param data_size: Whole dataset size. Used to scale the log prob for the whole dataset.
+
+        :return: Log probability as tf.EagerTensor
+        """
         g = self.graph
         triple = [(e_i, e_j, g[e_i][e_j].get("weight", 1.0)) for e_i, e_j in g.edges]
         edges_i, edges_j, weights = zip(*triple)
