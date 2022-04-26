@@ -102,7 +102,7 @@ class LaplacianEmbedding(Embedding):
             self.lambda1 = lambda1
             super().__init__(vocabulary, dimensionality, lambda0=lambda0, shared_context_vectors=shared_context_vectors)
             for wd in list(graph.nodes):
-                if wd in graph.nodes and wd not in vocabulary:
+                if wd in graph.nodes and wd not in self.vocabulary:
                     graph.remove_node(wd)
                     omitted_word_warning = f"'{wd}' does not exist in embedding vocabulary and will be omitted."
                     warnings.warn(omitted_word_warning)
