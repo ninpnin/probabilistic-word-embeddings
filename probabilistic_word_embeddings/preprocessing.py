@@ -7,7 +7,7 @@ def filter_rare_words(data, limit=5):
     Filter out words that only occur a handful of times
     
     Args:
-        data: list of strs
+        data (list): list of strs
     
     Returns:
         data, counts: list of strs and word counts as a dict
@@ -36,9 +36,9 @@ def downsample_common_words(data, counts, cutoff=0.00001):
     Initially proposed by Mikolov et al. (2013)
     
     Args:
-        data: list of strs or tf.Tensor of strings
-        counts: word counts as a dict
-        cutoff: lowest word frequency for when downsampling is applied, float
+        data (Union[list, tf.Tensor]): list of strs or tf.Tensor of strings
+        counts (dict): word counts in the dataset
+        cutoff (float): lowest word frequency for when downsampling is applied
     
     Returns:
         list of strs
@@ -65,7 +65,7 @@ def preprocess_standard(text):
     Standard preprocessing: filter out rare (<=5 occurences) words, downsample common words.
 
     Args:
-        text: text as a list of strs
+        text (list): text as a list of strs
 
     Returns:
         text, vocabulary: text as a list of strs, vocabulary as a set of strs

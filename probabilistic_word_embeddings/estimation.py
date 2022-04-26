@@ -17,16 +17,14 @@ def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, ep
     
     Args:
         embedding: Embedding with a suitable vocabulary and log_prob function. Subclass of pwe.Embedding
-        model: Word embedding model.
-
-            The model is expected to have 'loss' and 'init' functions.
-        data: Data as a list of of NumPy arrays. The arrays should consist of word indices.
-        ws: SGNS or CBOW window size
-        ns: SGNS or CBOW number of negative samples
-        batch_size: Batch size in the training process 
-        epochs: The number of passes over the data.
-        evaluate: Whether to run word similarity evaluation during training on the standard English evaluation data sets
-        profile: whether to run the tensorflow profiler during training
+        model (str): Word embedding model, either sgns or cbow.
+        data: Data as a list of NumPy arrays. The arrays should consist of word indices.
+        ws (int): SGNS or CBOW window size
+        ns (int): SGNS or CBOW number of negative samples
+        batch_size (int): Batch size in the training process 
+        epochs (int): The number of passes over the data.
+        evaluate (bool): Whether to run word similarity evaluation during training on the standard English evaluation data sets
+        profile (bool): whether to run the tensorflow profiler during training
     
     Returns:
         Trained embedding

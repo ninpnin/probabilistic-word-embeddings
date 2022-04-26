@@ -56,10 +56,11 @@ def word_similarity_datasets():
 def evaluate_word_similarity(embedding, dataset_names=None):
     """
     Evaluate embedding performance on word similarity tasks.
-
-    :param embedding: embedding as pwe.embeddings.Embedding
-    :param dataset_names: List of dataset names to evaluate on, as names or paths to TSV files.
-    If None, evaluate on all datasets that this module provides.
+    
+    Args:
+        embedding: embedding as pwe.embeddings.Embedding
+        dataset_names (list): List of dataset names to evaluate on, as names or paths to TSV files.
+            If None, evaluate on all datasets that this module provides.
     """
     if dataset_names is None:
         dataset_names = word_similarity_datasets()

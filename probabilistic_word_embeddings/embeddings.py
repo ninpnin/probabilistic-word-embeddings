@@ -62,8 +62,8 @@ class Embedding:
         Calculate the log (prior) probability of the embedding taking its current value
         
         Args:
-            batch_size: Batch size. Used to scale the log prob for the whole dataset.
-            data_size: Whole dataset size. Used to scale the log prob for the whole dataset.
+            batch_size (int): Batch size. Used to scale the log prob for the whole dataset.
+            data_size (int): Whole dataset size. Used to scale the log prob for the whole dataset.
         
         Returns:
             Log probability as 1D tensor as tf.EagerTensor
@@ -76,7 +76,7 @@ class Embedding:
         Save embedding as a pickled file
         
         Args:
-            path: Path where the embedding is saved to as a str.
+            path (str): Path where the embedding is saved to as a str.
         """
         theta = self.theta.numpy()
         d = {}
@@ -100,14 +100,13 @@ class LaplacianEmbedding(Embedding):
             if type(graph) != nx.Graph:
                 raise TypeError("graph must be a nx.Graph")
             self.lambda1 = lambda1
+            super().__init__(vocabulary, dimensionality, lambda0=lambda0, shared_context_vectors=shared_context_vectors)
             for wd in list(graph.nodes):
                 if wd in graph.nodes and wd not in vocabulary:
                     graph.remove_node(wd)
                     omitted_word_warning = f"'{wd}' does not exist in embedding vocabulary and will be omitted."
                     warnings.warn(omitted_word_warning)
-
             self.graph = graph
-            super().__init__(vocabulary, dimensionality, lambda0=lambda0, shared_context_vectors=shared_context_vectors)
         else:
             with open(saved_model_path, "rb") as f:
                 d = pickle.load(f)
@@ -123,8 +122,8 @@ class LaplacianEmbedding(Embedding):
         Calculate the log (prior) probability of the embedding taking its current value
         
         Args:
-            batch_size: Batch size. Used to scale the log prob for the whole dataset.
-            data_size: Whole dataset size. Used to scale the log prob for the whole dataset.
+            batch_size (int): Batch size. Used to scale the log prob for the whole dataset.
+            data_size (int): Whole dataset size. Used to scale the log prob for the whole dataset.
         
         Returns:
             Log probability as tf.EagerTensor
