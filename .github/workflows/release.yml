@@ -1,6 +1,8 @@
 name: Generate plot
 
-on: [release]
+on:
+  release:
+    - published
 
 jobs:
   build:

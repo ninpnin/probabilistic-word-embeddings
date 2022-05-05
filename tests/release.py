@@ -14,11 +14,17 @@ def main(args):
     with open("README.md", "w") as f:
         f.write(s)
 
-    
+
 
 if __name__ == '__main__':
     import argparse                                                           
     parser = argparse.ArgumentParser()                                        
     parser.add_argument("-v", "--version", type=str)                         
     args = parser.parse_args()
-    main(args)
+
+    args.version = exp.search(args.version)
+    if args.version is None:
+        exit()
+    else:
+        args.version = args.version.group(0)
+        main(args)
