@@ -24,4 +24,5 @@ jobs:
     - name: Test with unittest
       run: |
         PYTHONPATH="$PYTHONPATH:." python tests/release.py -v ${{ github.ref }}
+        cat README.md
 
