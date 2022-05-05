@@ -30,6 +30,5 @@ jobs:
 
     - name: Test with unittest
       run: |
-        PYTHONPATH="$PYTHONPATH:." python scripts/mapping_accuracy_estimate.py
-        PYTHONPATH="$PYTHONPATH:." python scripts/accuracy-version-plot.py -v v0.4.3
+        PYTHONPATH="$PYTHONPATH:." python tests/release.py -v ${{ github.ref }}
 
