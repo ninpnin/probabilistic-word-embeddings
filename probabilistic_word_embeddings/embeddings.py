@@ -53,14 +53,12 @@ class Embedding:
 
     def __setitem__(self, item, new_value):
         if type(item) == str:
-            self.theta[self.vocabulary[item]] = new_value
-        elif isinstance(item, list):
+            item = [item]
+        if isinstance(item, list):
             item = tf.constant(item)
         ix = self.tf_vocabulary.lookup(item)
         theta_new = self.theta.numpy()
         ix = list(ix.numpy())
-        print(ix)
-        print(theta_new.shape)
         theta_new[list(ix)] = new_value
         self.theta = tf.constant(theta_new)
     
