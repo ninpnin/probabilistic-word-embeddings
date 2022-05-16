@@ -58,6 +58,28 @@ class EmbeddingTest(unittest.TestCase):
         self.assertEqual(e.lambda0, e2.lambda0)
         self.assertEqual(e.lambda1, e2.lambda1)
 
+    def test_embedding_setting(self):
+        """
+        Test MAP estimation with example dataset
+        """
+        with open("tests/data/0.txt") as f:
+            text = f.read().lower().split()
+        text, vocabulary = preprocess_standard(text)
+
+        vocab_size = len(vocabulary)
+        batch_size = 250
+        dim = 25
+
+        e = Embedding(vocabulary=vocabulary, dimensionality=dim)
+        words = list(vocabulary)[:10]
+        new_embs = np.random.rand(10, dim)
+        e[words] = new_embs
+
+        old_embs = new_embs
+        new_embs = e[words]
+
+        self.assertAlmostEqual(np.max(np.abs(old_embs - new_embs)), 0.0)
+
 
 if __name__ == '__main__':
     # begin the unittest.main()
