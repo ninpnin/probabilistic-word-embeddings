@@ -80,6 +80,15 @@ class EmbeddingTest(unittest.TestCase):
 
         self.assertAlmostEqual(np.max(np.abs(old_embs - new_embs)), 0.0)
 
+        words = list(vocabulary)[-1]
+        new_embs = np.random.rand(dim)
+        e[words] = new_embs
+
+        old_embs = new_embs
+        new_embs = e[words]
+
+        self.assertAlmostEqual(np.max(np.abs(old_embs - new_embs)), 0.0)
+
 
 if __name__ == '__main__':
     # begin the unittest.main()
