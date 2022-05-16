@@ -42,7 +42,7 @@ class Embedding:
             self.theta = tf.Variable(d["theta"])
             self.lambda0 = d["lambda0"]
 
-    @tf.function
+    #@tf.function
     def __getitem__(self, item):
         if type(item) == str:
             return self.theta[self.vocabulary[item]]
@@ -52,15 +52,20 @@ class Embedding:
         return tf.gather(self.theta, ix, axis=0)
 
     def __setitem__(self, item, new_value):
+        #self.theta = self.theta - self.theta[]
         if type(item) == str:
             item = [item]
+            new_value = tf.expand_dims(new_value, axis=0)
         if isinstance(item, list):
             item = tf.constant(item)
         ix = self.tf_vocabulary.lookup(item)
-        theta_new = self.theta.numpy()
         ix = list(ix.numpy())
-        theta_new[list(ix)] = new_value
-        self.theta = tf.constant(theta_new)
+        ix = [[i] for i in ix]
+        old_value = self[item]
+        old_scattered = tf.scatter_nd(ix, old_value, self.theta.shape)
+        new_scattered = tf.scatter_nd(ix, new_value, self.theta.shape)
+        
+        self.theta = self.theta - old_scattered + new_scattered
     
     def __contains__(self, key):
         if type(key) == str:
