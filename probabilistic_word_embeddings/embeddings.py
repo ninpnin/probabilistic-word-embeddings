@@ -51,7 +51,6 @@ class Embedding:
         ix = self.tf_vocabulary.lookup(item)
         return tf.gather(self.theta, ix, axis=0)
 
-    @tf.function
     def __setitem__(self, item, new_value):
         if type(item) == str:
             self.theta[self.vocabulary[item]] = new_value
@@ -59,7 +58,10 @@ class Embedding:
             item = tf.constant(item)
         ix = self.tf_vocabulary.lookup(item)
         theta_new = self.theta.numpy()
-        theta_new[ix] = new_value
+        ix = list(ix.numpy())
+        print(ix)
+        print(theta_new.shape)
+        theta_new[list(ix)] = new_value
         self.theta = tf.constant(theta_new)
     
     def __contains__(self, key):
