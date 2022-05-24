@@ -11,7 +11,7 @@ import progressbar
 from scipy.spatial.distance import cosine as cos_dist
 import random
 
-def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, profile=False, history=False):
+def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, valid_data=None, profile=False, history=False):
     """
     Perform MAP estimation.
     
@@ -39,6 +39,13 @@ def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, ep
     e = embedding
     N = len(data)
     batches = N // batch_size
+    if valid_data is not None:
+        if not isinstance(valid_data, tf.Tensor):
+            valid_data = tf.constant(valid_data)
+        if model == "sgns":
+            valid_data = generate_sgns_batch(valid_data, ws=ws, ns=ns, batch=batch_size, start_ix=0)
+        if model == "cbow":
+            valid_data = generate_cbow_batch(valid_data, ws=ws, ns=ns, batch=batch_size, start_ix=0)
     for epoch in range(epochs):
         print(f"Epoch {epoch}")
         
@@ -48,6 +55,14 @@ def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, ep
             wa = sum(similarity["Rank Correlation"] * similarity["No. of Observations"]) / sum(similarity["No. of Observations"])
         
             print("Weighted average", wa)
+        if valid_data is not None:
+            i,j,x = valid_data
+            if model == "sgns":
+                valid_ll = tf.reduce_sum(sgns_likelihood(embedding, i, j, x=x))
+            elif model == "cbow":
+                valid_ll = tf.reduce_sum(cbow_likelihood(embedding, i, j, x=x))
+
+            print(f"Validation likelihood: {valid_ll}")
 
         # Shuffle the order of batches
         for batch in progressbar.progressbar(random.sample(range(batches),batches)):
