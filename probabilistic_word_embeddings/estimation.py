@@ -42,10 +42,8 @@ def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, ep
     if valid_data is not None:
         if not isinstance(valid_data, tf.Tensor):
             valid_data = tf.constant(valid_data)
-        if model == "sgns":
-            valid_data = generate_sgns_batch(valid_data, ws=ws, ns=ns, batch=batch_size, start_ix=0)
-        if model == "cbow":
-            valid_data = generate_cbow_batch(valid_data, ws=ws, ns=ns, batch=batch_size, start_ix=0)
+        valid_batches = len(valid_data) // batch_size
+
     for epoch in range(epochs):
         print(f"Epoch {epoch}")
         
@@ -56,13 +54,19 @@ def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, ep
         
             print("Weighted average", wa)
         if valid_data is not None:
-            i,j,x = valid_data
-            if model == "sgns":
-                valid_ll = tf.reduce_sum(sgns_likelihood(embedding, i, j, x=x))
-            elif model == "cbow":
-                valid_ll = tf.reduce_sum(cbow_likelihood(embedding, i, j, x=x))
+            print("validate...")
+            valid_ll = 0.0
+            for batch in progressbar.progressbar(range(valid_batches)):
+                start_ix = batch_size * batch
+                if model == "sgns":
+                    i,j,x  = generate_sgns_batch(valid_data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix)
+                    valid_ll += tf.reduce_sum(sgns_likelihood(embedding, i, j, x=x))
+                elif model == "cbow":
+                    i,j,x  = generate_cbow_batch(valid_data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix)
+                    valid_ll += tf.reduce_sum(cbow_likelihood(embedding, i, j, x=x))
 
-            print(f"Validation likelihood: {valid_ll}")
+            valid_ll = valid_ll / (batch_size * valid_batches)
+            print(f"Mean validation likelihood: {valid_ll}")
 
         # Shuffle the order of batches
         for batch in progressbar.progressbar(random.sample(range(batches),batches)):
