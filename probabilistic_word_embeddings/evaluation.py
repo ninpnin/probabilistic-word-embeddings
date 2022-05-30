@@ -19,6 +19,30 @@ from scipy.stats import spearmanr as rank_correlation
 import tensorflow as tf
 
 ###################
+# INTRINSIC EVALUATION #
+###################
+
+from .models import generate_sgns_batch, sgns_likelihood
+from .models import generate_cbow_batch, cbow_likelihood
+def evaluate_on_holdout_set(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000):
+    if not isinstance(data, tf.Tensor):
+        data = tf.constant(data)
+    valid_batches = len(data) // batch_size
+
+    valid_ll = 0.0
+    for batch in progressbar.progressbar(range(valid_batches)):
+        start_ix = batch_size * batch
+        if model == "sgns":
+            i,j,x  = generate_sgns_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix)
+            valid_ll += tf.reduce_sum(sgns_likelihood(embedding, i, j, x=x))
+        elif model == "cbow":
+            i,j,x  = generate_cbow_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix)
+            valid_ll += tf.reduce_sum(cbow_likelihood(embedding, i, j, x=x))
+
+    valid_ll = valid_ll / (batch_size * valid_batches)
+    return valid_ll
+
+###################
 # WORD SIMILARITY #
 ###################
 
