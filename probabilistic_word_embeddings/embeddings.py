@@ -42,7 +42,7 @@ class Embedding:
             self.theta = tf.Variable(d["theta"])
             self.lambda0 = d["lambda0"]
 
-    #@tf.function
+    @tf.function
     def __getitem__(self, item):
         if type(item) == str:
             return self.theta[self.vocabulary[item]]
@@ -123,6 +123,7 @@ class LaplacianEmbedding(Embedding):
                     omitted_word_warning = f"'{wd}' does not exist in embedding vocabulary and will be omitted."
                     warnings.warn(omitted_word_warning)
             self.graph = graph
+            self.edges_i = None
         else:
             with open(saved_model_path, "rb") as f:
                 d = pickle.load(f)
@@ -145,10 +146,16 @@ class LaplacianEmbedding(Embedding):
             Log probability as tf.EagerTensor
         """
         g = self.graph
-        triple = [(e_i, e_j, g[e_i][e_j].get("weight", 1.0)) for e_i, e_j in g.edges]
-        edges_i, edges_j, weights = zip(*triple)
-        edges_i, edges_j = tf.constant(edges_i), tf.constant(edges_j)
-        weights = tf.constant(weights, dtype=tf.float64) * self.lambda1
+        if self.edges_i is None:
+            triple = [(e_i, e_j, g[e_i][e_j].get("weight", 1.0)) for e_i, e_j in g.edges]
+            edges_i, edges_j, weights = zip(*triple)
+            edges_i, edges_j = tf.constant(edges_i), tf.constant(edges_j)
+            weights = tf.constant(weights, dtype=tf.float64) * self.lambda1
+            self.edges_i = edges_i
+            self.edges_j = edges_j
+            self.edge_weights = weights
+
+        edges_i, edges_j, weights = self.edges_i, self.edges_j, self.edge_weights
         theta_i, theta_j = self[edges_i], self[edges_j]
         diffs = theta_i - theta_j
         squared_diffs = tf.reduce_sum(tf.multiply(diffs, diffs), axis=-1)
