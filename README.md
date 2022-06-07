@@ -1,4 +1,4 @@
-# probabilistic-word-embeddings v0.7.8rc6
+# probabilistic-word-embeddings v0.11.0
 
 Probabilistic Word Embedding module for Python. Built with TensorFlow 2.x and TensorFlow probability.
 
