@@ -1,7 +1,7 @@
 import unittest
 
 from probabilistic_word_embeddings.embeddings import Embedding, LaplacianEmbedding
-from probabilistic_word_embeddings.preprocessing import preprocess_standard, preprocess_dynamic
+from probabilistic_word_embeddings.preprocessing import preprocess_standard, preprocess_partitioned
 from probabilistic_word_embeddings.estimation import map_estimate
 from probabilistic_word_embeddings.evaluation import get_eval_file, embedding_similarities, evaluate_word_similarity
 import tensorflow as tf
@@ -79,12 +79,10 @@ class Test(unittest.TestCase):
                 t = f.read().lower().split()
                 texts.append(t)
 
-        texts, vocabulary = preprocess_dynamic(texts)
+        texts, vocabulary = preprocess_partitioned(texts, names)
         text = []
-        for name, t in zip(names, texts):
-            for wd in t:
-                text.append(wd + "_" + name)
-        vocabulary = set(text)
+        for t in texts:
+            text = text + t
 
         vocab_size = len(vocabulary)
         batch_size = 250
