@@ -77,6 +77,18 @@ def preprocess_standard(text):
     return text, vocabulary
 
 def preprocess_partitioned(texts, labels):
+    """
+    Standard preprocessing for partitioned datasets: filter out rare (<=5 occurences) words, downsample common words.
+
+    Args:
+        texts (list): list of texts, each element of which is a list of strs
+        labels (list): label associated with each 
+
+    Returns:
+        text, vocabulary: text as a list of list of strs, vocabulary as a set of strs
+    """
+    assert len(texts) == len(labels), "Number of data partitions and labels must be equal"
+    assert isinstance(texts[0], list), "Data should be provided as a list of lists"
     texts, counts = filter_rare_words(texts)
     texts = [downsample_common_words(text, counts) for text in texts]
 
