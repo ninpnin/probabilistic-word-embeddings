@@ -1,7 +1,7 @@
 import unittest
 
 from probabilistic_word_embeddings.embeddings import Embedding, LaplacianEmbedding
-from probabilistic_word_embeddings.preprocessing import preprocess_standard, preprocess_dynamic
+from probabilistic_word_embeddings.preprocessing import preprocess_standard
 from probabilistic_word_embeddings.estimation import map_estimate
 from probabilistic_word_embeddings.evaluation import get_eval_file, embedding_similarities, evaluate_word_similarity
 import tensorflow as tf
