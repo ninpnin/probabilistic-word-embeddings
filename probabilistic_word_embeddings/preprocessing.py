@@ -76,9 +76,19 @@ def preprocess_standard(text):
     vocabulary = set(text)
     return text, vocabulary
 
-def preprocess_dynamic(texts):
+def preprocess_partitioned(texts, labels):
     texts, counts = filter_rare_words(texts)
-    #texts = [downsample_common_words(text, counts) for text in texts]
+    texts = [downsample_common_words(text, counts) for text in texts]
 
-    vocabulary = set({wd for wd, count in counts.items() if count >= 5})
+    def add_subscript(t, subscript):
+        if not isinstance(t, tf.Tensor):
+            t = tf.constant(t)
+        t = t + f"_{subscript}"
+        t = [wd.decode("utf-8") for wd in t.numpy()]
+        return t
+
+    texts = [add_subscript(text, label) for text, label in zip(texts, labels)]
+    vocabs = [set(text) for text in texts]
+    empty = set()
+    vocabulary = empty.union(*vocabs)
     return texts, vocabulary
