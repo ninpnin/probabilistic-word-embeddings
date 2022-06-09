@@ -24,23 +24,25 @@ import tensorflow as tf
 
 from .models import generate_sgns_batch, sgns_likelihood
 from .models import generate_cbow_batch, cbow_likelihood
-def evaluate_on_holdout_set(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000):
+def evaluate_on_holdout_set(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, reduce_mean=True):
     if not isinstance(data, tf.Tensor):
         data = tf.constant(data)
     valid_batches = len(data) // batch_size
 
-    valid_ll = 0.0
+    valid_ll = tf.constant([], dtype=tf.float64)
     for batch in progressbar.progressbar(range(valid_batches)):
         start_ix = batch_size * batch
         if model == "sgns":
             i,j,x  = generate_sgns_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix)
-            valid_ll += tf.reduce_sum(sgns_likelihood(embedding, i, j, x=x))
+            valid_ll = tf.concat([valid_ll, sgns_likelihood(embedding, i, j, x=x)], axis=0)
         elif model == "cbow":
             i,j,x  = generate_cbow_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix)
-            valid_ll += tf.reduce_sum(cbow_likelihood(embedding, i, j, x=x))
+            valid_ll = tf.concat([valid_ll, cbow_likelihood(embedding, i, j, x=x)], axis=0)
 
-    valid_ll = valid_ll / (batch_size * valid_batches)
-    return valid_ll
+    if reduce_mean:
+        return tf.reduce_mean(valid_ll)
+    else:
+        return valid_ll
 
 ###################
 # WORD SIMILARITY #
