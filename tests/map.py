@@ -101,7 +101,7 @@ class Test(unittest.TestCase):
 
     def test_holdout(self):
         """
-        Test MAP estimation with example dataset
+        Test evaluation of an embedding on a holdout set
         """
         with open("tests/data/0.txt") as f:
             text = f.read().lower().split()
@@ -111,8 +111,9 @@ class Test(unittest.TestCase):
         e = Embedding(vocabulary=vocabulary, dimensionality=dim)
 
         test_ll = evaluate_on_holdout_set(e, text, model="cbow", ws=5, batch_size=len(text))
-
-        self.assertLessEqual(test_ll, 0.0)
+        self.assertLess(test_ll, 0.0)
+        test_ll = evaluate_on_holdout_set(e, text, model="sgns", ws=5, batch_size=len(text))
+        self.assertLess(test_ll, 0.0)
 
 
 if __name__ == '__main__':
