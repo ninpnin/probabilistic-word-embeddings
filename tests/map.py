@@ -4,6 +4,7 @@ from probabilistic_word_embeddings.embeddings import Embedding, LaplacianEmbeddi
 from probabilistic_word_embeddings.preprocessing import preprocess_standard, preprocess_partitioned
 from probabilistic_word_embeddings.estimation import map_estimate
 from probabilistic_word_embeddings.evaluation import get_eval_file, embedding_similarities, evaluate_word_similarity
+from probabilistic_word_embeddings.evaluation import evaluate_on_holdout_set
 import tensorflow as tf
 import numpy as np
 from pathlib import Path
@@ -98,7 +99,21 @@ class Test(unittest.TestCase):
         embeddings = e[words]
         self.assertEqual(embeddings.shape, (K, dim))
 
-    
+    def test_holdout(self):
+        """
+        Test MAP estimation with example dataset
+        """
+        with open("tests/data/0.txt") as f:
+            text = f.read().lower().split()
+        text, vocabulary = preprocess_standard(text)
+
+        dim = 25
+        e = Embedding(vocabulary=vocabulary, dimensionality=dim)
+
+        test_ll = evaluate_on_holdout_set(e, text, model="cbow", ws=5, batch_size=len(text))
+
+        self.assertLessEqual(test_ll, 0.0)
+
 
 if __name__ == '__main__':
     # begin the unittest.main()
