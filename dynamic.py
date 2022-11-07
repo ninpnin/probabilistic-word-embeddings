@@ -11,10 +11,10 @@ import tensorflow as tf
 # Aggregate to yearly string objects and their associated years
 yearly = pl.read_csv("yearly.csv")
 yearly = yearly.with_column(pl.col("date") // 10000) # Flatten date to just the year
-texts, years = [], sorted(list(set(yearly.date)))
+texts, years = [], sorted(list(set(yearly["date"])))
 for year in years:
 	current = yearly.filter(pl.col("date") == year)
-	text = " ".join(current.speech).lower()
+	text = " ".join(current["speech"]).lower()
 	text = re.sub(r'[^ \w+]', '', text)
 	text = text.split()
 	texts.append(text)
