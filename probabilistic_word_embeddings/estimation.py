@@ -2,6 +2,7 @@
 import tensorflow as tf
 # Load model from models.py
 from .utils import shuffled_indices
+from .embeddings import Embedding
 from .models import generate_sgns_batch, sgns_likelihood
 from .models import generate_cbow_batch, cbow_likelihood
 from .evaluation import evaluate_word_similarity, evaluate_on_holdout_set
@@ -29,6 +30,10 @@ def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, ep
     Returns:
         Trained embedding
     """
+    if not isinstance(embedding, Embedding):
+        warnings.warn("embedding is not a subclass of probabilistic_word_embeddings.Embedding")
+    if model not in ["sgns", "cbow"]:
+        raise ValueError("model must be 'sgns' or 'cbow'")
     if profile:
         tf.profiler.experimental.start("logs")
 
