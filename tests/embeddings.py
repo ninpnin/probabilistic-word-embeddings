@@ -3,9 +3,10 @@ import unittest
 from probabilistic_word_embeddings.embeddings import Embedding, LaplacianEmbedding
 from probabilistic_word_embeddings.preprocessing import preprocess_standard
 from probabilistic_word_embeddings.estimation import map_estimate
-from probabilistic_word_embeddings.evaluation import get_eval_file, embedding_similarities, evaluate_word_similarity
+from probabilistic_word_embeddings.evaluation import get_eval_file, embedding_similarities, evaluate_word_similarity, evaluate_analogy
 import tensorflow as tf
 import numpy as np
+import pandas as pd
 from pathlib import Path
 import random
 import networkx as nx
@@ -17,7 +18,7 @@ class EmbeddingTest(unittest.TestCase):
         Test MAP estimation with example dataset
         """
         with open("tests/data/0.txt") as f:
-            text = f.read().lower().split()
+            text = f.read().replace(".", "").lower().split()
         text, vocabulary = preprocess_standard(text)
 
         vocab_size = len(vocabulary)
@@ -89,6 +90,28 @@ class EmbeddingTest(unittest.TestCase):
 
         self.assertAlmostEqual(np.max(np.abs(old_embs - new_embs)), 0.0)
 
+    def test_evaluation(self):
+        """
+        Test word analogy evaluation
+        """
+        with open("tests/data/0.txt") as f:
+            text = f.read().replace(".", "").lower().split()
+        text, vocabulary = preprocess_standard(text)
+
+        vocab_size = len(vocabulary)
+        batch_size = 250
+        dim = 25
+
+        e = Embedding(vocabulary=vocabulary, dimensionality=dim)
+        words = list(vocabulary)[:12]
+
+        d = {"w1": words[:3], "w2": words[3:6], "w3": words[6:9], "w4": words[9:]}
+        df = pd.DataFrame(d)
+        d2 = pd.DataFrame([[words[9], words[9], words[9], words[9]]], columns=["w1", "w2", "w3", "w4"])
+        df = pd.concat([df, d2])
+
+        df = evaluate_analogy(e, df)
+        print(df)
 
 if __name__ == '__main__':
     # begin the unittest.main()
