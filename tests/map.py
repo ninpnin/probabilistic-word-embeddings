@@ -3,7 +3,7 @@ import unittest
 from probabilistic_word_embeddings.embeddings import Embedding, LaplacianEmbedding
 from probabilistic_word_embeddings.preprocessing import preprocess_standard, preprocess_partitioned
 from probabilistic_word_embeddings.estimation import map_estimate
-from probabilistic_word_embeddings.evaluation import get_eval_file, embedding_similarities, evaluate_word_similarity
+from probabilistic_word_embeddings.evaluation import embedding_similarities, evaluate_word_similarity
 from probabilistic_word_embeddings.evaluation import evaluate_on_holdout_set
 import tensorflow as tf
 import numpy as np
