@@ -25,6 +25,21 @@ import tensorflow as tf
 from .models import generate_sgns_batch, sgns_likelihood
 from .models import generate_cbow_batch, cbow_likelihood
 def evaluate_on_holdout_set(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, reduce_mean=True):
+    """
+    Evaluate the performance of an embedding on a holdout set
+    
+    Args:
+        embedding: Embedding with a suitable vocabulary and log_prob function. Subclass of pwe.Embedding
+        data: Data as a list of NumPy arrays. The arrays should consist of word indices.
+        model (str): Word embedding model, either sgns or cbow.
+        ws (int): SGNS or CBOW window size
+        ns (int): SGNS or CBOW number of negative samples
+        batch_size (int): Batch size in the training process 
+        reduce_mean (bool): whether to return the mean of the losses, or a 1D tf.Tensor list of them
+
+    Returns:
+        Validation performance as a tf.Tensor
+    """
     if not isinstance(data, tf.Tensor):
         data = tf.constant(data)
     valid_batches = len(data) // batch_size
@@ -48,7 +63,7 @@ def evaluate_on_holdout_set(embedding, data, model="sgns", ws=5, ns=5, batch_siz
 # WORD SIMILARITY #
 ###################
 
-def get_eval_file(dataset_name):
+def _get_eval_file(dataset_name):
     try:
         stream = pkg_resources.resource_stream(__name__, f'data/eval/{dataset_name}.tsv')
     except FileNotFoundError:
@@ -92,7 +107,7 @@ def evaluate_word_similarity(embedding, dataset_names=None):
         dataset_names = word_similarity_datasets()
     rows = []
     for dataset in dataset_names:
-        eval_df = get_eval_file(dataset)
+        eval_df = _get_eval_file(dataset)
         embedding_df = embedding_similarities(eval_df, embedding)
         embedding_df = embedding_df.dropna()
 
@@ -106,7 +121,7 @@ def evaluate_word_similarity(embedding, dataset_names=None):
 
 def evaluate_analogy(embedding, dataset, K=25):
     """
-    Evaluate embedding performance on word similarity tasks.
+    Evaluate embedding performance on word analogy tasks.
     
     Args:
         embedding: embedding as pwe.embeddings.Embedding
@@ -161,19 +176,18 @@ def evaluate_analogy(embedding, dataset, K=25):
 # BILINGUAL LEXICON INDUCTION #
 ###############################
 
-def bli(pairs, embedding, vocab, precision=[1,5,15], reverse=False):
+def bli(pairs, embedding, precision=[1,5,15], reverse=False):
     """
     Calculates the Bilingual Lexicon Induction performance of a crosslingual word embedding.
     
     Args:
-        lang1: Source language
-        lang2: Target language
+        pairs: list of word pairs
         embedding: embedding as a numpy matrix
-        folder: folder of the vocab file
         precision: Precision level of the BLI score.
         reverse: Reverse the prediction; target language becomes the source language and vice versa.
     """
 
+    vocab = embedding.vocabulary
     inv_dictionary = {v: k for k, v in vocab.items()}
     vocab_size = len([wd for wd in vocab if len(wd.split("_")) == 2])
 

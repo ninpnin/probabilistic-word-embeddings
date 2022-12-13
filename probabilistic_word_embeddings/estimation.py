@@ -12,19 +12,21 @@ import progressbar
 from scipy.spatial.distance import cosine as cos_dist
 import random
 
-def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, valid_data=None, early_stopping=False, profile=False, history=False):
+def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, valid_data=None, early_stopping=False, profile=False):
     """
     Perform MAP estimation.
     
     Args:
         embedding: Embedding with a suitable vocabulary and log_prob function. Subclass of pwe.Embedding
-        model (str): Word embedding model, either sgns or cbow.
         data: Data as a list of NumPy arrays. The arrays should consist of word indices.
+        model (str): Word embedding model, either sgns or cbow.
         ws (int): SGNS or CBOW window size
         ns (int): SGNS or CBOW number of negative samples
         batch_size (int): Batch size in the training process 
         epochs (int): The number of passes over the data.
         evaluate (bool): Whether to run word similarity evaluation during training on the standard English evaluation data sets
+        valid_data: Data as a NumPy array, list or a tf.Tensor. The arrays should consist of word indices.
+        early_stopping (bool): Data as a NumPy array, list or a tf.Tensor. The arrays should consist of word indices.
         profile (bool): whether to run the tensorflow profiler during training
     
     Returns:
