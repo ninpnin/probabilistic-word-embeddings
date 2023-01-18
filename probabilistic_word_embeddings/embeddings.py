@@ -105,7 +105,7 @@ class Embedding:
             d["graph"] = self.graph
 
         with open(path, "wb") as f:
-            pickle.dump(d, f)
+            pickle.dump(d, f, protocol=4)
 
 class LaplacianEmbedding(Embedding):
     """
