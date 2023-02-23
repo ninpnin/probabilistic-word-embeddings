@@ -65,7 +65,8 @@ class Embedding:
         old_scattered = tf.scatter_nd(ix, old_value, self.theta.shape)
         new_scattered = tf.scatter_nd(ix, new_value, self.theta.shape)
         
-        self.theta = self.theta - old_scattered + new_scattered
+        self.theta.assign_add(new_scattered)
+        self.theta.assign_sub(old_scattered)
     
     def __contains__(self, key):
         if type(key) == str:
