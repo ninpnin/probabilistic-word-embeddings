@@ -10,7 +10,7 @@ from .evaluation import evaluate_word_similarity, evaluate_on_holdout_set
 import glob
 import progressbar
 from scipy.spatial.distance import cosine as cos_dist
-import random
+import random, warnings
 
 def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, valid_data=None, early_stopping=False, profile=False):
     """
@@ -89,3 +89,51 @@ def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, ep
         print("Assign the weights corresponding to the best validation loss")
         embedding.theta.assign(best_valid_weights)
     return embedding
+
+def mean_field_vi(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, valid_data=None):
+    if not isinstance(embedding, Embedding):
+        warnings.warn("embedding is not a subclass of probabilistic_word_embeddings.Embedding")
+    if model not in ["sgns", "cbow"]:
+        raise ValueError("model must be 'sgns' or 'cbow'")
+
+    if not isinstance(data, tf.Tensor):
+        data = tf.constant(data)
+
+    opt = tf.keras.optimizers.Adam(learning_rate=0.001)
+    e = embedding
+    N = len(data)
+    batches = N // batch_size
+    lr = 0.00001
+    
+    theta_mean = tf.Variable(tf.random.normal(e.theta.shape, dtype=tf.float64)* 0.00001)
+    theta_std_log =  tf.Variable(tf.zeros(e.theta.shape, dtype=tf.float64))
+    
+    for epoch in range(epochs):
+        print(f"Epoch {epoch}")
+        # Shuffle the order of batches
+        if evaluate:
+            similarity = evaluate_word_similarity(embedding)
+            print(similarity)
+
+        for batch in progressbar.progressbar(random.sample(range(batches),batches)):
+            epsilon = tf.random.normal(theta_mean.shape, dtype=tf.float64)
+            z = theta_mean + tf.multiply(tf.math.exp(theta_std_log), epsilon)
+            embedding.theta.assign(z)
+            
+            start_ix = batch_size * batch
+            i,j,x  = generate_cbow_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix)
+            
+            with tf.GradientTape() as tape:
+                objective = - tf.reduce_sum(cbow_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
+                d_l_d_theta = tape.gradient(objective, embedding.theta) * N / batch_size
+            
+            d_l_d_theta_mean = d_l_d_theta
+            d_l_d_theta_std_log = tf.multiply(tf.multiply(d_l_d_theta, epsilon), tf.math.exp(theta_std_log))
+            d_l_d_theta_std_log = d_l_d_theta_std_log - tf.ones(d_l_d_theta_std_log.shape, dtype=tf.float64)
+            print(d_l_d_theta_mean * lr)
+            print(d_l_d_theta_std_log * lr)
+            theta_mean.assign_sub(d_l_d_theta_mean * lr)
+            theta_std_log.assign_sub(d_l_d_theta_std_log * lr)
+            
+        embedding.theta.assign(theta_mean)
+    return embedding, theta_std_log
