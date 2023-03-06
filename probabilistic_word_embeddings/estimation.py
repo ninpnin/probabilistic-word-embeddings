@@ -99,14 +99,18 @@ def mean_field_vi(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, e
     if not isinstance(data, tf.Tensor):
         data = tf.constant(data)
 
-    opt = tf.keras.optimizers.Adam(learning_rate=0.001)
+    optimizer = tf.keras.optimizers.experimental.Adam(learning_rate=0.001)
     e = embedding
     N = len(data)
     batches = N // batch_size
-    lr = 0.00001
     
     theta_mean = tf.Variable(tf.random.normal(e.theta.shape, dtype=tf.float64)* 0.00001)
-    theta_std_log =  tf.Variable(tf.zeros(e.theta.shape, dtype=tf.float64))
+    theta_std_log =  tf.Variable(tf.random.normal(e.theta.shape, dtype=tf.float64)* 0.00001)
+    
+    opt_mean_var = optimizer.add_variable_from_reference(theta_mean, "theta_mean", initial_value=theta_mean)
+    opt_std_var = optimizer.add_variable_from_reference(theta_std_log, "theta_std_log", initial_value=theta_std_log)
+    optimizer.build([opt_mean_var, opt_std_var])
+
     
     for epoch in range(epochs):
         print(f"Epoch {epoch}")
@@ -124,16 +128,21 @@ def mean_field_vi(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, e
             i,j,x  = generate_cbow_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix)
             
             with tf.GradientTape() as tape:
-                objective = - tf.reduce_sum(cbow_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
-                d_l_d_theta = tape.gradient(objective, embedding.theta) * N / batch_size
+                log_prob = tf.reduce_sum(cbow_likelihood(e, i, j, x=x)) + e.log_prob(batch_size, N)
+                d_l_d_theta = -tape.gradient(log_prob, embedding.theta) * N / batch_size
             
             d_l_d_theta_mean = d_l_d_theta
             d_l_d_theta_std_log = tf.multiply(tf.multiply(d_l_d_theta, epsilon), tf.math.exp(theta_std_log))
             d_l_d_theta_std_log = d_l_d_theta_std_log - tf.ones(d_l_d_theta_std_log.shape, dtype=tf.float64)
-            print(d_l_d_theta_mean * lr)
-            print(d_l_d_theta_std_log * lr)
-            theta_mean.assign_sub(d_l_d_theta_mean * lr)
-            theta_std_log.assign_sub(d_l_d_theta_std_log * lr)
+
+            optimizer.update_step(d_l_d_theta_mean, opt_mean_var)
+            optimizer.update_step(d_l_d_theta_std_log, opt_std_var)
+            print(opt_mean_var)
+            print(opt_std_var)
             
-        embedding.theta.assign(theta_mean)
+            theta_mean.assign(opt_mean_var)
+            theta_std_log.assign(opt_std_var)
+
+            
+        embedding.theta.assign(opt_mean_var)
     return embedding, theta_std_log
