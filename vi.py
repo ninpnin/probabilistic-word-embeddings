@@ -16,6 +16,6 @@ dim = 100
 e = LaplacianEmbedding(vocabulary, dim, g)
 # Perform MAP estimation
 
-e, log_std = mean_field_vi(e, text, model="cbow", ws=5, epochs=15)
+e, log_std = mean_field_vi(e, text, model="cbow", ws=5, epochs=25)
 similarity = evaluate_word_similarity(e)
 print(similarity)
