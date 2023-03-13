@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import pickle
+import warnings
     
 # MAP estimation
 #@tf.function
@@ -83,6 +84,15 @@ def align(e_reference, e, words):
     Orthogonally rotate an embedding to minimize the Euclidian distance
     to a reference embedding
     """
+
+    assert all([(w in e) for w in words]), 'not all words are in e'
+    assert all([(w in e_reference) for w in words]), 'not all words are in e_reference'
+    assert e.theta.shape[1] == e_reference.theta.shape[1], f'embedding size needs to be the same e:{e.theta.shape[1]}, e_reference:{e_reference.theta.shape[1]}'
+    
+    # Alert if the numbers of words are less than (undetermined system): (D-1)/2
+    if len(words) < (e.theta.shape[1]-1)/2:
+        warnings.warn(f"Numbers of words={len(words)} is less than (D-1)/2={(e.theta.shape[1]-1)/2}, and the system is thus undetermined.")
+    
 
     x_prime = e_reference[words]
     x = e[words]
