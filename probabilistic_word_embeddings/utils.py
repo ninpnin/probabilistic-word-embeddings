@@ -97,9 +97,6 @@ def align(e_reference, e, words):
     x_prime = e_reference[words]
     x = e[words]
 
-    diff0 = tf.multiply(x_prime - x, x_prime - x)
-    diff0 = tf.reduce_sum(diff0)
-
     a = tf.tensordot(x_prime, x, axes=(0,0))
     a_sum = tf.reduce_mean(a)
 
@@ -111,9 +108,5 @@ def align(e_reference, e, words):
     x_prime = e_reference[words]
     x = e[words]
 
-    diff1 = tf.multiply(x_prime - x, x_prime - x)
-    diff1 = tf.reduce_sum(diff1)
-
-    assert diff0 > diff1, "Rotation should not increase Euclidian distance"
     return e
 

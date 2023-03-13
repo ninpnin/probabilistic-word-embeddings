@@ -4,6 +4,7 @@ from probabilistic_word_embeddings.embeddings import Embedding, LaplacianEmbeddi
 from probabilistic_word_embeddings.preprocessing import preprocess_standard
 from probabilistic_word_embeddings.estimation import map_estimate
 from probabilistic_word_embeddings.evaluation import embedding_similarities, evaluate_word_similarity, evaluate_analogy
+from probabilistic_word_embeddings.utils import align
 import tensorflow as tf
 import numpy as np
 import pandas as pd
@@ -112,6 +113,39 @@ class EmbeddingTest(unittest.TestCase):
 
         df = evaluate_analogy(e, df)
         print(df)
+
+    def test_alignment(self):
+        """
+        Test embedding alignment
+        """
+        with open("tests/data/0.txt") as f:
+            text = f.read().replace(".", "").lower().split()
+        vocabulary = set(list(set(text))[:300])
+        vocab_size = len(vocabulary)
+        testwords = list(vocabulary)[:100]
+        dim = 3
+
+        e1 = Embedding(vocabulary=vocabulary, dimensionality=dim)
+        e2 = Embedding(vocabulary=vocabulary, dimensionality=dim)
+
+        reversed_testwords = list(reversed(testwords))
+        dots = tf.reduce_sum(tf.multiply(e2[testwords], e2[reversed_testwords]), axis=1)
+
+        mean_diff = tf.reduce_sum(tf.multiply(e1.theta - e2.theta, e1.theta - e2.theta))        
+        self.assertGreater(mean_diff, 0.0)
+
+        words = e1
+        e2 = align(e1, e2, list(vocabulary))
+
+        mean_diff_prime = tf.reduce_sum(tf.multiply(e1.theta - e2.theta, e1.theta - e2.theta))
+        self.assertGreater(mean_diff, mean_diff_prime)
+
+        dots_prime = tf.reduce_sum(tf.multiply(e2[testwords], e2[reversed_testwords]), axis=1)
+
+        # Check that the dot products remain unchanged
+        max_diff = tf.reduce_max(tf.abs(dots - dots_prime)).numpy()
+        self.assertAlmostEqual(max_diff, 0.0)
+
 
 if __name__ == '__main__':
     # begin the unittest.main()
