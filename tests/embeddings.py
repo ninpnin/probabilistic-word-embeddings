@@ -123,7 +123,7 @@ class EmbeddingTest(unittest.TestCase):
         vocabulary = set(list(set(text))[:300])
         vocab_size = len(vocabulary)
         testwords = list(vocabulary)[:100]
-        dim = 3
+        dim = 25
 
         e1 = Embedding(vocabulary=vocabulary, dimensionality=dim)
         e2 = Embedding(vocabulary=vocabulary, dimensionality=dim)
