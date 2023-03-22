@@ -21,7 +21,7 @@ def filter_rare_words(data, limit=5):
 
         outdata = []
         for dataset in data:
-            outdataset = [wd for wd in dataset if counts[wd] >= limit]
+            outdataset = [wd for wd in progressbar.progressbar(dataset) if counts[wd] >= limit]
             outdata.append(outdataset)
     else:
         for wd in data:
