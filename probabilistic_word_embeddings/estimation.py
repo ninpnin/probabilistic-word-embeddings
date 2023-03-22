@@ -105,7 +105,7 @@ def mean_field_vi(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, e
     batches = N // batch_size
     
     theta_mean = tf.Variable(tf.random.normal(e.theta.shape, dtype=tf.float64)* 0.00001)
-    theta_std_log =  tf.Variable(tf.random.normal(e.theta.shape, dtype=tf.float64)* 0.00001)
+    theta_std_log =  tf.Variable(tf.random.normal(e.theta.shape, dtype=tf.float64)* 0.00001-3.0)
     
     opt_mean_var = optimizer.add_variable_from_reference(theta_mean, "theta_mean", initial_value=theta_mean)
     opt_std_var = optimizer.add_variable_from_reference(theta_std_log, "theta_std_log", initial_value=theta_std_log)
@@ -137,12 +137,13 @@ def mean_field_vi(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, e
 
             optimizer.update_step(d_l_d_theta_mean, opt_mean_var)
             optimizer.update_step(d_l_d_theta_std_log, opt_std_var)
-            print(opt_mean_var)
-            print(opt_std_var)
             
             theta_mean.assign(opt_mean_var)
             theta_std_log.assign(opt_std_var)
 
-            
+        print(opt_mean_var)
+        print(opt_std_var)
+
+        print(log_prob)
         embedding.theta.assign(opt_mean_var)
     return embedding, theta_std_log
