@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from .utils import dict_to_tf, transitive_dict
+import progressbar
 
 def filter_rare_words(data, limit=5):
     """
@@ -26,11 +27,11 @@ def filter_rare_words(data, limit=5):
         for wd in data:
             counts[wd] = counts.get(wd, 0) + 1
             
-        outdata = [wd for wd in data if counts[wd] >= limit]
+        outdata = [wd for wd in progressbar.progressbar(data) if counts[wd] >= limit]
     counts = {wd: count for wd, count in counts.items() if count >= limit}
     return outdata, counts
 
-def downsample_common_words(data, counts, cutoff=0.00001):
+def downsample_common_words(data, counts, cutoff=0.00001, chunk_len=5000000):
     """
     Discard words with the probability of 1 - sqrt(10^-5 / freq)
     Initially proposed by Mikolov et al. (2013)
@@ -49,16 +50,30 @@ def downsample_common_words(data, counts, cutoff=0.00001):
     print("Discard some instances of the most common words...")
     N = sum(counts.values())
     counts_tf = dict_to_tf(counts)
-    
-    frequencies = counts_tf.lookup(data) / N
-    # Discard probability based on relative frequency
-    probs = 1. - tf.sqrt(cutoff / frequencies)
-    # Randomize and fetch by this probability
-    rands = tf.random.uniform(shape=data.shape, dtype=tf.float64)
-    kepts = rands > probs
-    indices = tf.where(kepts)
-    newdata = tf.gather_nd(data, indices)
-    return [wd.decode("utf-8") for wd in newdata.numpy()]
+        # Randomize and fetch by this probability
+    if len(data) < chunk_len:
+        frequencies = counts_tf.lookup(data) / N
+        # Discard probability based on relative frequency
+        probs = 1. - tf.sqrt(cutoff / frequencies)
+
+        rands = tf.random.uniform(shape=data.shape, dtype=tf.float64)
+        kepts = rands > probs
+        indices = tf.where(kepts)
+        newdata = tf.gather_nd(data, indices)
+        return [wd.decode("utf-8") for wd in newdata.numpy()]
+    else:
+        l = []
+        for i in progressbar.progressbar(list(range(len(data) // chunk_len))):
+            chunk = data[i:i + chunk_len]
+            frequencies = counts_tf.lookup(chunk) / N
+            probs = 1. - tf.sqrt(cutoff / frequencies)
+            rands = tf.random.uniform(shape=chunk.shape, dtype=tf.float64)
+            kepts = rands > probs
+            indices = tf.where(kepts)
+            newdata = tf.gather_nd(chunk, indices)
+            l = l + [wd.decode("utf-8") for wd in newdata.numpy()]
+
+        return l
 
 def preprocess_standard(text):
     """
