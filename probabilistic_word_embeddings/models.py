@@ -34,8 +34,10 @@ def cbow_likelihood(embedding, i, j, x=None):
     
 # Generate a random i,j batch of the data.
 #@tf.function
-def generate_sgns_batch(data, ws=5, ns=5, batch=150000, start_ix=0, dataset_ix=0):
-    i,j = _generate_cbow_batch(data, tf.constant(ws), tf.constant(ns), tf.constant(batch), tf.constant(start_ix))
+def generate_sgns_batch(data, ws=5, ns=5, batch=150000, start_ix=0, dataset_ix=0, ns_data=None):
+    if ns_data is None:
+        ns_data = data
+    i,j = _generate_cbow_batch(data, ns_data, tf.constant(ws), tf.constant(ns), tf.constant(batch), tf.constant(start_ix))
     
     i = tf.transpose(tf.tile([i], [ws * 2, 1]))
     
@@ -45,14 +47,16 @@ def generate_sgns_batch(data, ws=5, ns=5, batch=150000, start_ix=0, dataset_ix=0
     return i,j,x
 
 # Generate a random i,j batch of the data.
-def generate_cbow_batch(data, ws=5, ns=5, batch=150000, start_ix=0, dataset_ix=0):
+def generate_cbow_batch(data, ws=5, ns=5, batch=150000, start_ix=0, dataset_ix=0, ns_data=None):
     #settings = tf.constant([ws, ns, batch, start_ix, dataset_ix])
-    i,j = _generate_cbow_batch(data, tf.constant(ws), tf.constant(ns), tf.constant(batch), tf.constant(start_ix))
+    if ns_data is None:
+        ns_data = data
+    i,j = _generate_cbow_batch(data, ns_data, tf.constant(ws), tf.constant(ns), tf.constant(batch), tf.constant(start_ix))
     x = tf.concat([tf.ones(batch, dtype=tf.float64), tf.zeros(ns * batch, dtype=tf.float64)], axis=0,)
     return i,j,x
 
 @tf.function
-def _generate_cbow_batch(data, ws, ns, batch, start_ix):
+def _generate_cbow_batch(data, ns_data, ws, ns, batch, start_ix):
     #ws, ns, batch, start_ix, dataset_ix = settings
     # the dog saw the cat
     # data = [0, 1, 2, ..., 0, 3]
