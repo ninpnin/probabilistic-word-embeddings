@@ -64,7 +64,8 @@ def downsample_common_words(data, counts, cutoff=0.00001, chunk_len=5000000):
     else:
         l = []
         for i in progressbar.progressbar(list(range(len(data) // chunk_len))):
-            chunk = data[i:i + chunk_len]
+            i_prime = i * chunk_len
+            chunk = data[i_prime:i_prime + chunk_len]
             frequencies = counts_tf.lookup(chunk) / N
             probs = 1. - tf.sqrt(cutoff / frequencies)
             rands = tf.random.uniform(shape=chunk.shape, dtype=tf.float64)
