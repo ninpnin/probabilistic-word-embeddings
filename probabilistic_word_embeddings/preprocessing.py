@@ -85,11 +85,13 @@ def preprocess_standard(text):
     Returns:
         text, vocabulary: text as a list of strs, vocabulary as a set of strs
     """
+    N = len(text)
     text, counts = filter_rare_words(text)
     text = downsample_common_words(text, counts)
 
     vocabulary = set(text)
-    return text, vocabulary
+    freqs = {wd: counts[wd] / N for wd in list(vocabulary)}
+    return text, freqs
 
 def preprocess_partitioned(texts, labels):
     """
@@ -104,6 +106,7 @@ def preprocess_partitioned(texts, labels):
     """
     assert len(texts) == len(labels), "Number of data partitions and labels must be equal"
     assert isinstance(texts[0], list), "Data should be provided as a list of lists"
+    N = sum([len(t) for t in texts])
     texts, counts = filter_rare_words(texts)
     texts = [downsample_common_words(text, counts) for text in texts]
 
@@ -118,4 +121,14 @@ def preprocess_partitioned(texts, labels):
     vocabs = [set(text) for text in texts]
     empty = set()
     vocabulary = empty.union(*vocabs)
-    return texts, vocabulary
+
+
+    def _remove_subscript(wd):
+        s = wd.split("_")
+        n = len(s)
+        return "_".join(s[:n-1])
+
+    unnormalized_freqs = {wd: counts[_remove_subscript(wd)] / N for wd in list(vocabulary)}
+    freqs_sum = sum(unnormalized_freqs.values())
+    freqs = {wd: f / freqs_sum for wd, f in unnormalized_freqs.items()}
+    return texts, freqs
