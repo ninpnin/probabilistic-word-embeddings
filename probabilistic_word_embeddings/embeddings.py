@@ -15,8 +15,10 @@ class Embedding:
     '''
     def __init__(self, vocabulary=None, dimensionality=100, lambda0=1.0, shared_context_vectors=True, saved_model_path=None):
         if saved_model_path is None:
+            if isinstance(vocabulary, dict):
+                vocabulary = set(vocabulary.keys())
             if not isinstance(vocabulary, set):
-                raise TypeError("vocabulary must be provided as a set, e.g. {'some','example', 'words'}")
+                raise TypeError("vocabulary must be provided as a set, e.g. {'some','example', 'words'}, or a dict {'some': 0.1, 'example': 0.2, 'words': 0.7}")
             keys = list(vocabulary)
             if not shared_context_vectors:
                 keys = keys + list(set([key + "_c" for key in keys]))
