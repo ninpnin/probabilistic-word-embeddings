@@ -12,7 +12,7 @@ import progressbar
 from scipy.spatial.distance import cosine as cos_dist
 import random, warnings
 
-def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, valid_data=None, early_stopping=False, profile=False):
+def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, vocab_freqs=None, valid_data=None, early_stopping=False, profile=False):
     """
     Perform MAP estimation.
     
@@ -53,6 +53,19 @@ def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, ep
         best_valid_performance = None
         best_valid_weights = None
 
+    if vocab_freqs is None:
+        ns_data = data
+    else:
+        vocab = [wd for wd in vocab_freqs]
+        freqs = [vocab_freqs[wd] for wd in vocab]
+        vocab = tf.constant(vocab)
+        logits = 3/4 * tf.math.log(tf.constant([freqs]))
+        ns_i = tf.random.categorical(logits, N)
+        ns_data = tf.gather(vocab, ns_i)
+        ns_data = tf.reshape(ns_data, [N])
+        print("ns data", ns_data)
+
+
     for epoch in range(epochs):
         print(f"Epoch {epoch}")
         
@@ -79,10 +92,10 @@ def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, ep
         for batch in progressbar.progressbar(random.sample(range(batches),batches)):
             start_ix = batch_size * batch
             if model == "sgns":
-                i,j,x  = generate_sgns_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix)
-                objective = lambda: - tf.reduce_sum(sgns_likelihood(embedding, i, j, x=x)) - embedding.log_prob(batch_size, N)
+                i,j,x  = generate_sgns_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix, ns_data=ns_data)
+                objective = lambda: - tf.reduce_sum(sgns_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
             elif model == "cbow":
-                i,j,x  = generate_cbow_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix)
+                i,j,x  = generate_cbow_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix, ns_data=ns_data)
                 objective = lambda: - tf.reduce_sum(cbow_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
             _ = opt.minimize(objective, [embedding.theta])
     if early_stopping and valid_data is not None and best_valid_weights is not None:

@@ -81,7 +81,7 @@ def _generate_cbow_batch(data, ns_data, ws, ns, batch, start_ix):
     # Get word types at the indices i, j
     i = tf.gather(data , i_return)
     j = tf.gather(data , j)
-    ns_i = tf.gather(data , ns_i)
+    ns_i = tf.gather(ns_data , ns_i)
     ns_j = tf.gather(data , ns_j)
 
     # Concatenate positive and negative samples
