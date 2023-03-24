@@ -4,7 +4,7 @@ from probabilistic_word_embeddings.embeddings import Embedding, LaplacianEmbeddi
 from probabilistic_word_embeddings.preprocessing import preprocess_standard, preprocess_partitioned
 from probabilistic_word_embeddings.estimation import map_estimate
 from probabilistic_word_embeddings.evaluation import embedding_similarities, evaluate_word_similarity
-from probabilistic_word_embeddings.evaluation import evaluate_on_holdout_set
+from probabilistic_word_embeddings.evaluation import evaluate_on_holdout_set, bli
 import tensorflow as tf
 import numpy as np
 from pathlib import Path
@@ -158,6 +158,39 @@ class Test(unittest.TestCase):
         words = random.choices(text, k=K)
         embeddings = e[words]
         self.assertEqual(embeddings.shape, (K, dim))
+
+    def test_crosslingual_map(self):
+        paths = sorted(list(Path("tests/data/crosslingual/").glob("*.txt")))
+        names, texts = [], []
+        for p in paths:
+            names.append(p.stem)
+            with p.open(errors="ignore") as f:
+                t = f.read().lower().split()
+                texts.append(t)
+
+        texts, vocabulary = preprocess_partitioned(texts, names)
+        text = []
+        for t in texts:
+            text = text + t
+
+        vocab_size = len(vocabulary)
+        batch_size = 250
+        dim = 25
+        
+        e = Embedding(vocabulary=vocabulary, dimensionality=dim, shared_context_vectors=False)
+        theta_before = e.theta.numpy()
+        e = map_estimate(e, text, evaluate=False, batch_size=batch_size, epochs=1)
+        theta = e.theta.numpy()
+        self.assertNotEqual(tf.reduce_sum(theta-theta_before), 0.0)
+        self.assertEqual(type(theta), np.ndarray)
+
+        K = 23
+        words = random.choices(text, k=K)
+        embeddings = e[words]
+        self.assertEqual(embeddings.shape, (K, dim))
+
+        pairs = [("cat_en", "gatto_it"), ("man_en", "uomo_it"), ("day_en", "giorno_it")]
+        bli(pairs, e)
 
     def test_holdout(self):
         """

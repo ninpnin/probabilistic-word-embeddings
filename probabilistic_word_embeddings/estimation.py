@@ -62,13 +62,15 @@ def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, ep
         logits = 3/4 * tf.math.log(tf.constant([freqs]))
         ns_data = []
         print("Randomize negative sample dataset...")
-        for batch in progressbar.progressbar(range(batches)):
-            ns_i = tf.random.categorical(logits, batch_size)
+        ns_batch_size = (500 * 1000 * 1000) // len(vocab)
+        ns_batches = N // ns_batch_size
+        for batch in progressbar.progressbar(range(ns_batches)):
+            ns_i = tf.random.categorical(logits, ns_batch_size)
             ns_data_batch = tf.gather(vocab, ns_i)
-            ns_data_batch = tf.reshape(ns_data_batch, [batch_size])
+            ns_data_batch = tf.reshape(ns_data_batch, [ns_batch_size])
             ns_data.append(ns_data_batch)
 
-        ns_data.append(data[batches * batch_size:])
+        ns_data.append(data[ns_batches * ns_batch_size:])
         ns_data = tf.concat(ns_data, axis=0)
 
         assert len(ns_data) == len(data), f"{len(ns_data)} vs {len(data)}"
