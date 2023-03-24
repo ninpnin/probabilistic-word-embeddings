@@ -227,7 +227,7 @@ def bli(pairs, e, precision=[1,5,15], reverse=False):
         topwords = [target_vocab[i] for i in tops]
         for p in precision:
             topwords_p = topwords[:p]
-            x = target_words[i] in topwords
+            x = target_words[i] in topwords_p
             correct[p].append(x)
 
     return correct
