@@ -1,5 +1,6 @@
 """Point estimation of the models"""
 import tensorflow as tf
+import numpy as np
 # Load model from models.py
 from .utils import shuffled_indices
 from .embeddings import Embedding
@@ -11,8 +12,9 @@ import glob
 import progressbar
 from scipy.spatial.distance import cosine as cos_dist
 import random, warnings
+import sys
 
-def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, vocab_freqs=None, valid_data=None, early_stopping=False, profile=False):
+def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, vocab_freqs=None, valid_data=None, early_stopping=False, profile=False, training_loss=False):
     """
     Perform MAP estimation.
     
@@ -98,7 +100,8 @@ def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, ep
                 best_valid_performance = valid_ll
 
         # Shuffle the order of batches
-        for batch in progressbar.progressbar(random.sample(range(batches),batches)):
+        epoch_training_loss = []
+        for batch in progressbar.progressbar(random.sample(range(batches),batches), redirect_stdout=True):
             start_ix = batch_size * batch
             if model == "sgns":
                 i,j,x  = generate_sgns_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix, ns_data=ns_data)
@@ -107,6 +110,12 @@ def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, ep
                 i,j,x  = generate_cbow_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix, ns_data=ns_data)
                 objective = lambda: - tf.reduce_sum(cbow_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
             _ = opt.minimize(objective, [embedding.theta])
+            if training_loss:
+                epoch_training_loss.append(objective() / len(i))
+                batch_no = len(epoch_training_loss)
+                if batch_no % 250 == 0:
+                    print(f"Epoch {epoch} mean training loss after {batch_no} batches: {np.mean(epoch_training_loss)}")
+
     if early_stopping and valid_data is not None and best_valid_weights is not None:
         print("Assign the weights corresponding to the best validation loss")
         embedding.theta.assign(best_valid_weights)

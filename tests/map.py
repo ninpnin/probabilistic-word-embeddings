@@ -41,6 +41,34 @@ class Test(unittest.TestCase):
         embeddings = e[words]
         self.assertEqual(embeddings.shape, (K, dim))
 
+    def test_map_training_loss(self):
+        """
+        Test MAP estimation with example dataset
+        """
+        with open("tests/data/0.txt") as f:
+            text = f.read().lower().split()
+        text, vocabulary = preprocess_standard(text)
+
+        vocab_size = len(vocabulary)
+        batch_size = 250
+        dim = 25
+        e = Embedding(vocabulary=vocabulary, dimensionality=dim)
+        theta_before = e.theta.numpy()
+        e = map_estimate(e, text, evaluate=False, batch_size=batch_size, epochs=5, training_loss=True)
+        theta = e.theta.numpy()
+
+        self.assertEqual(type(theta), np.ndarray)
+        self.assertNotEqual(tf.reduce_sum(theta-theta_before), 0.0)
+
+        theta_shape = theta.shape
+        valid_shape = (vocab_size * 2, dim)
+        self.assertEqual(theta_shape, valid_shape)
+
+        K = 23
+        words = random.choices(text, k=K)
+        embeddings = e[words]
+        self.assertEqual(embeddings.shape, (K, dim))
+
     def test_map_cbow(self):
         """
         Test MAP estimation with example dataset
