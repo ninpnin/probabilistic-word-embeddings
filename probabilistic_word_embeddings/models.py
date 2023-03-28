@@ -31,10 +31,17 @@ def cbow_likelihood(embedding, i, j, x=None):
     ps = tf.math.sigmoid(logits)
     log_ps = tf.math.log(ps)
     return log_ps
-    
+
+def generate_batch(data, ws=5, ns=5, batch_size=20000, start_ix=0, dataset_ix=0, ns_data=None, model="cbow"):
+    assert model in ["cbow", "sgns"]
+    if model == "cbow":
+        return generate_cbow_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix, ns_data=ns_data)
+    if model == "sgns":
+        return generate_sgns_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix, ns_data=ns_data)
+        
 # Generate a random i,j batch of the data.
 #@tf.function
-def generate_sgns_batch(data, ws=5, ns=5, batch=150000, start_ix=0, dataset_ix=0, ns_data=None):
+def generate_sgns_batch(data, ws=5, ns=5, batch=150000, start_ix=0, ns_data=None):
     if ns_data is None:
         ns_data = data
     i,j = _generate_cbow_batch(data, ns_data, tf.constant(ws), tf.constant(ns), tf.constant(batch), tf.constant(start_ix))
@@ -47,7 +54,7 @@ def generate_sgns_batch(data, ws=5, ns=5, batch=150000, start_ix=0, dataset_ix=0
     return i,j,x
 
 # Generate a random i,j batch of the data.
-def generate_cbow_batch(data, ws=5, ns=5, batch=150000, start_ix=0, dataset_ix=0, ns_data=None):
+def generate_cbow_batch(data, ws=5, ns=5, batch=150000, start_ix=0, ns_data=None):
     #settings = tf.constant([ws, ns, batch, start_ix, dataset_ix])
     if ns_data is None:
         ns_data = data

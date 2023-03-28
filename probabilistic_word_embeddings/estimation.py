@@ -4,7 +4,7 @@ import numpy as np
 # Load model from models.py
 from .utils import shuffled_indices
 from .embeddings import Embedding
-from .models import generate_sgns_batch, sgns_likelihood
+from .models import generate_batch
 from .models import generate_cbow_batch, cbow_likelihood
 from .evaluation import evaluate_word_similarity, evaluate_on_holdout_set
 
@@ -42,13 +42,16 @@ def map_estimate(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, ep
     if profile:
         tf.profiler.experimental.start("logs")
 
-    if not isinstance(data, tf.Tensor):
-        data = tf.constant(data)
+    datasets = data
+    if not isinstance(data[0], list):
+        datasets = [data]
+
+    datasets = [tf.constant(data) for data in datasets]
 
     opt = tf.keras.optimizers.Adam(learning_rate=0.001)
     e = embedding
-    N = len(data)
-    batches = N // batch_size
+    Ns = [len(data) for data in datasets]
+    batches = [N // batch_size for N in Ns]
     if valid_data is not None:
         if not isinstance(valid_data, tf.Tensor):
             valid_data = tf.constant(valid_data)
@@ -57,26 +60,33 @@ def map_estimate(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, ep
         best_valid_weights = None
 
     if vocab_freqs is None:
-        ns_data = data
+        ns_data_list = [data for data in datasets]
     else:
-        vocab = [wd for wd in vocab_freqs]
-        freqs = [vocab_freqs[wd] for wd in vocab]
-        vocab = tf.constant(vocab)
-        logits = 3/4 * tf.math.log(tf.constant([freqs]))
-        ns_data = []
-        print("Randomize negative sample dataset...")
-        ns_batch_size = (500 * 1000 * 1000) // len(vocab)
-        ns_batches = N // ns_batch_size
-        for batch in progressbar.progressbar(range(ns_batches)):
-            ns_i = tf.random.categorical(logits, ns_batch_size)
-            ns_data_batch = tf.gather(vocab, ns_i)
-            ns_data_batch = tf.reshape(ns_data_batch, [ns_batch_size])
-            ns_data.append(ns_data_batch)
+        ns_data_list = []
+        vocab_freqs_list = vocab_freqs
+        if type(vocab_freqs) is dict:
+            vocab_freqs_list = [vocab_freqs]
+        for N, vocab_freqs, data in zip(Ns, vocab_freqs_list, datasets):
+            vocab = [wd for wd in vocab_freqs]
+            freqs = [vocab_freqs[wd] for wd in vocab]
+            vocab = tf.constant(vocab)
+            logits = 3/4 * tf.math.log(tf.constant([freqs]))
+            print("Randomize negative sample dataset...")
+            ns_batch_size = (500 * 1000 * 1000) // len(vocab)
+            ns_batches = N // ns_batch_size
+            ns_data = []
+            for batch in progressbar.progressbar(range(ns_batches)):
+                ns_i = tf.random.categorical(logits, ns_batch_size)
+                ns_data_batch = tf.gather(vocab, ns_i)
+                ns_data_batch = tf.reshape(ns_data_batch, [ns_batch_size])
+                ns_data.append(ns_data_batch)
 
-        ns_data.append(data[ns_batches * ns_batch_size:])
-        ns_data = tf.concat(ns_data, axis=0)
+            ns_data.append(data[ns_batches * ns_batch_size:])
+            ns_data = tf.concat(ns_data, axis=0)
+        ns_data_list.append(ns_data)
 
-        assert len(ns_data) == len(data), f"{len(ns_data)} vs {len(data)}"
+        for ns_data, data in zip(ns_data_list, datasets):
+            assert len(ns_data) == len(data), f"{len(ns_data)} vs {len(data)}"
 
     for epoch in range(epochs):
         print(f"Epoch {epoch}")
@@ -102,20 +112,24 @@ def map_estimate(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, ep
 
         # Shuffle the order of batches
         epoch_training_loss = []
-        for batch in progressbar.progressbar(random.sample(range(batches),batches), redirect_stdout=True):
-            start_ix = batch_size * batch
-            if model == "sgns":
-                i,j,x  = generate_sgns_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix, ns_data=ns_data)
-                objective = lambda: - tf.reduce_sum(sgns_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
-            elif model == "cbow":
-                i,j,x  = generate_cbow_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix, ns_data=ns_data)
-                objective = lambda: - tf.reduce_sum(cbow_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
-            _ = opt.minimize(objective, [embedding.theta])
-            if training_loss:
-                epoch_training_loss.append(objective() / len(i))
-                batch_no = len(epoch_training_loss)
-                if batch_no % 250 == 0:
-                    print(f"Epoch {epoch} mean training loss after {batch_no} batches: {np.mean(epoch_training_loss)}")
+        batches_max = max(batches)
+        randomized_batches = [[random.sample(range(batches_i), 1)[0] for batches_i in batches] for _ in range(batches_max)]
+        for batch_list in progressbar.progressbar(randomized_batches, redirect_stdout=True):
+            start_indices = [batch_size * batch for batch in batch_list]
+
+            for dataset_ix in range(len(datasets)):
+                start_ix, data, ns_data, N = start_indices[dataset_ix], datasets[dataset_ix], ns_data_list[dataset_ix], Ns[dataset_ix]
+                i,j,x  = generate_batch(data, model=model, ws=ws, ns=ns, batch_size=batch_size, start_ix=start_ix, ns_data=ns_data)
+                if model == "sgns":
+                    objective = lambda: - tf.reduce_sum(sgns_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
+                elif model == "cbow":
+                    objective = lambda: - tf.reduce_sum(cbow_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
+                _ = opt.minimize(objective, [embedding.theta])
+                if training_loss:
+                    epoch_training_loss.append(objective() / len(i))
+                    batch_no = len(epoch_training_loss)
+                    if batch_no % 250 == 0:
+                        print(f"Epoch {epoch} mean training loss after {batch_no} batches: {np.mean(epoch_training_loss)}")
 
     if early_stopping and valid_data is not None and best_valid_weights is not None:
         print("Assign the weights corresponding to the best validation loss")
@@ -157,10 +171,13 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
             embedding.theta.assign(z)
             
             start_ix = batch_size * batch
-            i,j,x  = generate_cbow_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix)
-            
+            i,j,x  = generate_batch(data, model=model, ws=ws, ns=ns, batch_size=batch_size, start_ix=start_ix)
+
             with tf.GradientTape() as tape:
-                log_prob = tf.reduce_sum(cbow_likelihood(e, i, j, x=x)) + e.log_prob(batch_size, N)
+                if model == "cbow":
+                    log_prob = tf.reduce_sum(cbow_likelihood(e, i, j, x=x)) + e.log_prob(batch_size, N)
+                elif model == "sgns":
+                    log_prob = tf.reduce_sum(sgns_likelihood(e, i, j, x=x)) + e.log_prob(batch_size, N)
                 d_l_d_theta = -tape.gradient(log_prob, embedding.theta) * N / batch_size
             
             d_l_d_theta_mean = d_l_d_theta
