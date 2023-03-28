@@ -215,19 +215,26 @@ def bli(pairs, e, precision=[1,5,15], reverse=False):
     source_words = [p[0] for p in pairs]
     target_words = [p[1] for p in pairs]
 
-    target_vocab = [wd for wd in embedding.vocabulary if f"_{l2}" in wd]
+    target_vocab = [wd for wd in vocab if f"_{l2}" in wd]
     E_target = embedding[target_vocab]
     E_source = embedding[source_words]
 
     A = tf.tensordot(E_target, E_source, axes=[1,1])
-    correct = {p: [] for p in precision}
-    for i in range(A.shape[1]):
+    rows = []
+    print("A shape", A.shape)
+    for i, target_word in enumerate(target_words):
+        source_word = source_words[i]
         y_hat = A[:,i]
         _, tops = tf.math.top_k(y_hat, k=max(precision))
         topwords = [target_vocab[i] for i in tops]
+        row_correct = []
         for p in precision:
             topwords_p = topwords[:p]
-            x = target_words[i] in topwords_p
-            correct[p].append(x)
+            x = target_word in topwords_p
+            row_correct.append(x)
 
-    return correct
+        row = [source_word, target_word] + row_correct + topwords
+        rows.append(row)
+
+    columns = ["source", "target"] + [f"p@{p}" for p in precision] + [f"guess-{g}" for g in range(max(precision))]
+    return pd.DataFrame(rows, columns=columns)
