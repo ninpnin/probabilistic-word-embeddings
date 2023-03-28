@@ -14,7 +14,7 @@ from scipy.spatial.distance import cosine as cos_dist
 import random, warnings
 import sys
 
-def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, vocab_freqs=None, valid_data=None, early_stopping=False, profile=False, training_loss=False):
+def map_estimate(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, vocab_freqs=None, valid_data=None, early_stopping=False, profile=False, training_loss=False):
     """
     Perform MAP estimation.
     
@@ -122,7 +122,7 @@ def map_estimate(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, ep
         embedding.theta.assign(best_valid_weights)
     return embedding
 
-def mean_field_vi(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, valid_data=None):
+def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, valid_data=None):
     if not isinstance(embedding, Embedding):
         warnings.warn("embedding is not a subclass of probabilistic_word_embeddings.Embedding")
     if model not in ["sgns", "cbow"]:
