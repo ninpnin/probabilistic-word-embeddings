@@ -197,9 +197,6 @@ class Test(unittest.TestCase):
                 texts.append(t)
 
         texts, vocabulary = preprocess_partitioned(texts, names)
-        text = []
-        for t in texts:
-            text = text + t
 
         vocab_size = len(vocabulary)
         batch_size = 250
@@ -207,15 +204,16 @@ class Test(unittest.TestCase):
         
         e = Embedding(vocabulary=vocabulary, dimensionality=dim, shared_context_vectors=False)
         theta_before = e.theta.numpy()
-        e = map_estimate(e, text, evaluate=False, batch_size=batch_size, epochs=1)
+        e = map_estimate(e, texts, evaluate=False, batch_size=batch_size, epochs=1)
         theta = e.theta.numpy()
         self.assertNotEqual(tf.reduce_sum(theta-theta_before), 0.0)
         self.assertEqual(type(theta), np.ndarray)
 
         K = 23
-        words = random.choices(text, k=K)
-        embeddings = e[words]
-        self.assertEqual(embeddings.shape, (K, dim))
+        for i in range(len(texts)):
+            words = random.choices(texts[i], k=K)
+            embeddings = e[words]
+            self.assertEqual(embeddings.shape, (K, dim))
 
         pairs = [("cat_en", "gatto_it"), ("man_en", "uomo_it"), ("day_en", "giorno_it")]
         bli(pairs, e)
