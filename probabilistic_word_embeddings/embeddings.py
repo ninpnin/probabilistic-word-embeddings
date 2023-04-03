@@ -61,6 +61,8 @@ class Embedding:
         if isinstance(item, list):
             item = tf.constant(item)
         ix = self.tf_vocabulary.lookup(item)
+        if tf.unique(ix)[0].shape != ix.shape:
+            warnings.warn("Duplicate indices detected in __setitem__")
         ix = list(ix.numpy())
         ix = [[i] for i in ix]
         old_value = self[item]
