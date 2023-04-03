@@ -1,7 +1,7 @@
 import unittest
 
 from probabilistic_word_embeddings.embeddings import Embedding, LaplacianEmbedding
-from probabilistic_word_embeddings.preprocessing import preprocess_standard
+from probabilistic_word_embeddings.preprocessing import preprocess_standard, preprocess_partitioned
 from probabilistic_word_embeddings.estimation import map_estimate
 from probabilistic_word_embeddings.evaluation import embedding_similarities, evaluate_word_similarity, evaluate_analogy
 from probabilistic_word_embeddings.utils import align
@@ -90,6 +90,89 @@ class EmbeddingTest(unittest.TestCase):
         new_embs = e[words]
 
         self.assertAlmostEqual(np.max(np.abs(old_embs - new_embs)), 0.0)
+
+        words = tf.constant(list(vocabulary))
+        new_embs = np.random.rand(len(vocabulary), dim)
+        e[words] = new_embs
+
+        old_embs = new_embs
+        new_embs = e[words]
+
+        self.assertAlmostEqual(np.max(np.abs(old_embs - new_embs)), 0.0)
+
+        words = tf.constant(list(vocabulary)) + "_c"
+        new_embs = np.random.rand(len(vocabulary), dim)
+        e[words] = new_embs
+
+        old_embs = new_embs
+        new_embs = e[words]
+
+        self.assertAlmostEqual(np.max(np.abs(old_embs - new_embs)), 0.0)
+
+
+    def test_dynamic_embedding_setting(self):
+        paths = sorted(list(Path("tests/data/").glob("*.txt")))
+        names, texts = [], []
+        for p in paths:
+            names.append(p.stem)
+            with p.open() as f:
+                t = f.read().lower().replace("_", "").replace(".", "").replace(",", "")
+                t = t.split()
+                texts.append(t)
+
+        texts, vocabulary = preprocess_partitioned(texts, names)
+        text = []
+        for t in texts:
+            text = text + t
+
+        vocab_size = len(vocabulary)
+        batch_size = 250
+        dim = 25
+        
+        e = Embedding(vocabulary=vocabulary, dimensionality=dim)
+
+        # Word vectors
+        no_words = 10
+        words = [random.choice(list(e.vocabulary)) for _ in range(no_words)]
+        print(words)
+        new_embs = np.random.rand(no_words, dim)
+        e[words] = new_embs
+
+        old_embs = new_embs
+        new_embs = e[words]
+
+        self.assertAlmostEqual(np.max(np.abs(old_embs - new_embs)), 0.0)
+
+        new_embs = np.random.rand(no_words, dim)
+        e[words] = new_embs
+
+        old_embs = new_embs
+        new_embs = e[words]
+
+        self.assertAlmostEqual(np.max(np.abs(old_embs - new_embs)), 0.0)
+
+        words = tf.constant(list(vocabulary))
+        new_embs = np.random.rand(len(vocabulary), dim)
+        e[words] = new_embs
+
+        old_embs = new_embs
+        new_embs = e[words]
+
+        self.assertAlmostEqual(np.max(np.abs(old_embs - new_embs)), 0.0)
+
+        vocabulary = set([wd.split("_")[0] for wd in vocabulary])
+        for label in [0, 1]:
+            words = [wd + f"_{label}_c" for wd in vocabulary]
+            words = [wd for wd in words if wd in e]
+
+            new_embs = np.random.rand(len(words), dim)
+            e[words] = new_embs
+
+            old_embs = new_embs
+            new_embs = e[words]
+
+            self.assertAlmostEqual(np.max(np.abs(old_embs - new_embs)), 0.0)
+
 
     def test_evaluation(self):
         """
