@@ -26,7 +26,7 @@ class Test(unittest.TestCase):
         dim = 25
         e = Embedding(vocabulary=vocabulary, dimensionality=dim)
         theta_before = e.theta.numpy()
-        e = map_estimate(e, text, evaluate=False, batch_size=batch_size, epochs=1)
+        e = map_estimate(e, text, model="sgns", evaluate=False, batch_size=batch_size, epochs=1)
         theta = e.theta.numpy()
 
         self.assertEqual(type(theta), np.ndarray)

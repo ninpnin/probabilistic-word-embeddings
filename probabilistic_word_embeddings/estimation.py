@@ -5,7 +5,7 @@ import numpy as np
 from .utils import shuffled_indices
 from .embeddings import Embedding
 from .models import generate_batch
-from .models import generate_cbow_batch, cbow_likelihood
+from .models import generate_cbow_batch, cbow_likelihood, sgns_likelihood
 from .evaluation import evaluate_word_similarity, evaluate_on_holdout_set
 
 import glob
@@ -150,11 +150,11 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
     N = len(data)
     batches = N // batch_size
     
-    theta_mean = tf.Variable(tf.random.normal(e.theta.shape, dtype=tf.float64)* 0.00001)
-    theta_std_log =  tf.Variable(tf.random.normal(e.theta.shape, dtype=tf.float64)* 0.00001)
+    q_mean = tf.Variable(tf.random.normal(e.theta.shape, dtype=tf.float64)* 0.00001)
+    q_std_log =  tf.Variable(tf.random.normal(e.theta.shape, dtype=tf.float64)* 0.00001 - 3.0)
     
-    opt_mean_var = optimizer.add_variable_from_reference(theta_mean, "theta_mean", initial_value=theta_mean)
-    opt_std_var = optimizer.add_variable_from_reference(theta_std_log, "theta_std_log", initial_value=theta_std_log)
+    opt_mean_var = optimizer.add_variable_from_reference(q_mean, "q_mean", initial_value=q_mean)
+    opt_std_var = optimizer.add_variable_from_reference(q_std_log, "q_std_log", initial_value=q_std_log)
     optimizer.build([opt_mean_var, opt_std_var])
 
     
@@ -166,8 +166,9 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
             print(similarity)
 
         for batch in progressbar.progressbar(random.sample(range(batches),batches)):
-            epsilon = tf.random.normal(theta_mean.shape, dtype=tf.float64)
-            z = theta_mean + tf.multiply(tf.math.exp(theta_std_log), epsilon)
+            # Reparametrization trick, Q = mu + sigma * epsilon
+            epsilon = tf.random.normal(q_std_log.shape, dtype=tf.float64)
+            z = q_mean + tf.multiply(tf.math.exp(q_std_log), epsilon)
             embedding.theta.assign(z)
             
             start_ix = batch_size * batch
@@ -180,18 +181,28 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
                     log_prob = tf.reduce_sum(sgns_likelihood(e, i, j, x=x)) + e.log_prob(batch_size, N)
                 d_l_d_theta = -tape.gradient(log_prob, embedding.theta) * N / batch_size
             
-            d_l_d_theta_mean = d_l_d_theta
-            d_l_d_theta_std_log = tf.multiply(tf.multiply(d_l_d_theta, epsilon), tf.math.exp(theta_std_log))
-            d_l_d_theta_std_log = d_l_d_theta_std_log - tf.ones(d_l_d_theta_std_log.shape, dtype=tf.float64)
+            d_l_d_q_mean = d_l_d_theta
+            d_l_q_std_log = tf.multiply(tf.multiply(d_l_d_theta, epsilon), tf.math.exp(q_std_log))
 
-            optimizer.update_step(d_l_d_theta_mean, opt_mean_var)
-            optimizer.update_step(d_l_d_theta_std_log, opt_std_var)
+            # Add the entropy term
+            d_l_q_std_log = d_l_q_std_log - tf.ones(d_l_q_std_log.shape, dtype=tf.float64)
+
+            optimizer.update_step(d_l_d_q_mean, opt_mean_var)
+            optimizer.update_step(d_l_q_std_log, opt_std_var)
             print(opt_mean_var)
             print(opt_std_var)
             
-            theta_mean.assign(opt_mean_var)
-            theta_std_log.assign(opt_std_var)
+            q_mean.assign(opt_mean_var)
+            q_std_log.assign(opt_std_var)
 
             
         embedding.theta.assign(opt_mean_var)
-    return embedding, theta_std_log
+
+    embedding_q_mean = embedding
+    return embedding_q_mean, q_std_log
+
+
+
+
+
+
