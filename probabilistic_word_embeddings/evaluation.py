@@ -122,6 +122,45 @@ def evaluate_word_similarity(embedding, dataset_names=None):
 
     return pd.DataFrame(rows, columns=["Dataset", "Rank Correlation", "No. of Observations", "p-value"])
 
+def nearest_neighbors(embedding, words, K=25):
+    """
+    Evaluate embedding performance on word analogy tasks.
+    
+    Args:
+        embedding: embedding as pwe.embeddings.Embedding
+        dataset (pd.DataFrame): Dataframe where each row has four words, word1 - word2 + word3 ≈ word4
+    """
+    e = copy.deepcopy(embedding)
+    words = [wd for wd in words if wd in embedding]
+    r = len(words)
+    X = embedding[words]
+
+    inv_vocab = {v: k for k, v in e.vocabulary.items()}
+    eliminate = list(range(len(inv_vocab)))
+    eliminate = [0.0 if ("_c" in inv_vocab[i] or inv_vocab[i] in words) else 1.0 for i in eliminate]
+    eliminate = tf.transpose(tf.constant([eliminate], dtype=tf.float64))
+
+    X, _ = tf.linalg.normalize(X, axis=1)
+
+    theta, _ = tf.linalg.normalize(e.theta, axis=1)
+    e.theta.assign(theta)
+
+    Ex = tf.linalg.tensordot(e.theta, X, axes=[1,1])
+    tiled_eliminate = tf.tile(eliminate, [1,r])
+    Ex = tf.multiply(Ex, tiled_eliminate)
+
+    rows = []
+
+    for i in range(r):
+        y_hat = Ex[:,i]
+        _, tops = tf.math.top_k(y_hat, k=K)
+        topwords = [inv_vocab[int(i)] for i in tops]
+        rows.append([words[i]] + topwords)
+    
+    columns = ["target"] + [f"@{i+1}" for i in range(K)]
+    df = pd.DataFrame(rows, columns=columns)
+    return df
+
 def evaluate_analogy(embedding, dataset, K=25):
     """
     Evaluate embedding performance on word analogy tasks.

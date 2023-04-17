@@ -3,7 +3,7 @@ import unittest
 from probabilistic_word_embeddings.embeddings import Embedding, LaplacianEmbedding
 from probabilistic_word_embeddings.preprocessing import preprocess_standard, preprocess_partitioned
 from probabilistic_word_embeddings.estimation import map_estimate
-from probabilistic_word_embeddings.evaluation import embedding_similarities, evaluate_word_similarity, evaluate_analogy
+from probabilistic_word_embeddings.evaluation import embedding_similarities, evaluate_word_similarity, evaluate_analogy, nearest_neighbors
 from probabilistic_word_embeddings.utils import align
 import tensorflow as tf
 import numpy as np
@@ -228,6 +228,38 @@ class EmbeddingTest(unittest.TestCase):
         # Check that the dot products remain unchanged
         max_diff = tf.reduce_max(tf.abs(dots - dots_prime)).numpy()
         self.assertAlmostEqual(max_diff, 0.0)
+
+    def test_nearest_neighbors(self):
+        """
+        Test embedding alignment
+        """
+        with open("tests/data/0.txt") as f:
+            text = f.read().replace(".", "").lower().split()
+        text, vocabulary = preprocess_standard(text)
+        dim = 25
+
+        target = "friend"
+        nearest = ["face", "distress", "sleep"]
+
+        e = Embedding(vocabulary=vocabulary, dimensionality=dim)
+
+        for _ in range(5):
+            e_target = np.random.randn(25)
+            EPSILON = 0.01
+            DEVIATION = np.random.randn(25)
+            e_nearest = [e_target + EPSILON * DEVIATION * (i + 1) for i, _ in enumerate(nearest)]
+
+            e[target] = e_target
+            for wd, e_i in zip(nearest, e_nearest):
+                e[wd] = e_i
+
+            nearest_hat = nearest_neighbors(e, [target], K=len(nearest))
+            nearest_hat = list(nearest_hat.loc[0])[1:]
+            #print(nearest_hat)
+            for k, wordpair in enumerate(zip(nearest, nearest_hat)):
+                k = k + 1
+                wd, wd_hat = wordpair
+                self.assertEqual(wd, wd_hat)
 
 
 if __name__ == '__main__':
