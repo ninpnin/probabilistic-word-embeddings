@@ -234,6 +234,17 @@ class Test(unittest.TestCase):
         test_ll = evaluate_on_holdout_set(e, text, model="sgns", ws=5, batch_size=len(text))
         self.assertLess(test_ll, 0.0)
 
+    def test_keep_words(self):
+        with open("tests/data/0.txt") as f:
+            text = f.read().lower().split()
+        _, vocabulary1 = preprocess_standard(text)
+        _, vocabulary2 = preprocess_standard(text, keep_words={"hasty"})
+
+        self.assertNotIn("hasty", vocabulary1)
+        self.assertIn("hasty", vocabulary2)
+
+
+
 
 if __name__ == '__main__':
     # begin the unittest.main()

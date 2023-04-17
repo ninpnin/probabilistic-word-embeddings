@@ -3,7 +3,7 @@ import tensorflow as tf
 from .utils import dict_to_tf, transitive_dict
 import progressbar
 
-def filter_rare_words(data, limit=5):
+def filter_rare_words(data, limit=5, keep_words=set()):
     """
     Filter out words that only occur a handful of times
     
@@ -21,14 +21,14 @@ def filter_rare_words(data, limit=5):
 
         outdata = []
         for dataset in data:
-            outdataset = [wd for wd in progressbar.progressbar(dataset) if counts[wd] >= limit]
+            outdataset = [wd for wd in progressbar.progressbar(dataset) if counts[wd] >= limit or wd in keep_words]
             outdata.append(outdataset)
     else:
         for wd in progressbar.progressbar(data):
             counts[wd] = counts.get(wd, 0) + 1
             
-        outdata = [wd for wd in progressbar.progressbar(data) if counts[wd] >= limit]
-    counts = {wd: count for wd, count in counts.items() if count >= limit}
+        outdata = [wd for wd in progressbar.progressbar(data) if counts[wd] >= limit or wd in keep_words]
+    counts = {wd: count for wd, count in counts.items() if count >= limit or wd in keep_words}
     return outdata, counts
 
 def downsample_common_words(data, counts, cutoff=0.00001, chunk_len=5000000):
@@ -76,7 +76,7 @@ def downsample_common_words(data, counts, cutoff=0.00001, chunk_len=5000000):
 
         return l
 
-def preprocess_standard(text):
+def preprocess_standard(text, keep_words=set()):
     """
     Standard preprocessing: filter out rare (<=5 occurences) words, downsample common words.
 
@@ -87,14 +87,14 @@ def preprocess_standard(text):
         text, vocabulary: text as a list of strs, vocabulary as a set of strs
     """
     N = len(text)
-    text, counts = filter_rare_words(text)
+    text, counts = filter_rare_words(text, keep_words=keep_words)
     text = downsample_common_words(text, counts)
 
     vocabulary = set(text)
     freqs = {wd: counts[wd] / N for wd in list(vocabulary)}
     return text, freqs
 
-def preprocess_partitioned(texts, labels):
+def preprocess_partitioned(texts, labels, keep_words=set()):
     """
     Standard preprocessing for partitioned datasets: filter out rare (<=5 occurences) words, downsample common words.
 
@@ -108,7 +108,7 @@ def preprocess_partitioned(texts, labels):
     assert len(texts) == len(labels), "Number of data partitions and labels must be equal"
     assert isinstance(texts[0], list), "Data should be provided as a list of lists"
     N = sum([len(t) for t in texts])
-    texts, counts = filter_rare_words(texts)
+    texts, counts = filter_rare_words(texts, keep_words=keep_words)
     texts = [downsample_common_words(text, counts) for text in texts]
 
     def add_subscript(t, subscript):
