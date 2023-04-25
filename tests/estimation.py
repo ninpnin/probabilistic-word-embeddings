@@ -237,8 +237,8 @@ class Test(unittest.TestCase):
     def test_keep_words(self):
         with open("tests/data/0.txt") as f:
             text = f.read().lower().split()
-        _, vocabulary1 = preprocess_standard(text)
-        _, vocabulary2 = preprocess_standard(text, keep_words={"hasty"})
+        _, vocabulary1 = preprocess_standard(text, downsample=False)
+        _, vocabulary2 = preprocess_standard(text, downsample=False, keep_words={"hasty"})
 
         self.assertNotIn("hasty", vocabulary1)
         self.assertIn("hasty", vocabulary2)
@@ -264,6 +264,7 @@ class Test(unittest.TestCase):
 
         for elbo_i, elbo_i_plus_1 in zip(elbo_history[:-1], elbo_history[1:]):
             self.assertLess(elbo_i, elbo_i_plus_1, f"ELBO_i should be smaller than ELBO_i+1 ({elbo_i} vs {elbo_i_plus_1})")
+
 
 
 if __name__ == '__main__':
