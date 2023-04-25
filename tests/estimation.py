@@ -257,10 +257,13 @@ class Test(unittest.TestCase):
         e = Embedding(vocabulary=vocabulary, dimensionality=dim)
 
         ll_before = evaluate_on_holdout_set(e, text, model="cbow", ws=5, batch_size=batch_size)
-        q_mu, q_std_log = mean_field_vi(e, text, model="cbow", evaluate=False, batch_size=batch_size, epochs=10)
+        q_mu, q_std_log, elbo_history = mean_field_vi(e, text, model="cbow", evaluate=False, batch_size=batch_size, epochs=10, elbo_history=True)
         ll_after = evaluate_on_holdout_set(q_mu, text, model="cbow", ws=5, batch_size=batch_size)
 
         self.assertLess(ll_before, ll_after)
+
+        for elbo_i, elbo_i_plus_1 in zip(elbo_history[:-1], elbo_history[1:]):
+            self.assertLess(elbo_i, elbo_i_plus_1, f"ELBO_i should be smaller than ELBO_i+1 ({elbo_i} vs {elbo_i_plus_1})")
 
 
 if __name__ == '__main__':
