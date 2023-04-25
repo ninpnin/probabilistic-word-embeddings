@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import pickle
+import warnings
     
 # MAP estimation
 #@tf.function
@@ -77,3 +78,36 @@ def transitive_dict(a, b):
             c[key_a] = b[key_b]
         
     return c
+
+def align(e_reference, e, words, words_reference=None):
+    """
+    Orthogonally rotate an embedding to minimize the Euclidian distance
+    to a reference embedding
+    """
+
+    if words_reference is None:
+        words_reference = words
+    else:
+        assert len(words_reference) == len(words), "'words' and 'words_reference' need to be of equal length"
+    assert all([(w in e) for w in words]), 'not all words are in e'
+    assert all([(w in e_reference) for w in words_reference]), 'not all words are in e_reference'
+    assert e.theta.shape[1] == e_reference.theta.shape[1], f'embedding size needs to be the same e:{e.theta.shape[1]}, e_reference:{e_reference.theta.shape[1]}'
+    
+    # Alert if the numbers of words are less than (undetermined system): (D-1)/2
+    if len(words) < (e.theta.shape[1]-1)/2:
+        warnings.warn(f"Numbers of words={len(words)} is less than (D-1)/2={(e.theta.shape[1]-1)/2}, and the system is thus undetermined.")
+    
+
+    x_prime = e_reference[words_reference]
+    x = e[words]
+
+    a = tf.tensordot(x_prime, x, axes=(0,0))
+    a_sum = tf.reduce_mean(a)
+
+    s, u, v = tf.linalg.svd(a, full_matrices=True)
+
+    W = v @ tf.transpose(u)
+    e.theta.assign(e.theta @ W)
+
+    return e
+
