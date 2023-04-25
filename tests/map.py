@@ -2,7 +2,7 @@ import unittest
 
 from probabilistic_word_embeddings.embeddings import Embedding, LaplacianEmbedding
 from probabilistic_word_embeddings.preprocessing import preprocess_standard, preprocess_partitioned
-from probabilistic_word_embeddings.estimation import map_estimate
+from probabilistic_word_embeddings.estimation import map_estimate, mean_field_vi
 from probabilistic_word_embeddings.evaluation import embedding_similarities, evaluate_word_similarity
 from probabilistic_word_embeddings.evaluation import evaluate_on_holdout_set, bli
 import tensorflow as tf
@@ -243,7 +243,24 @@ class Test(unittest.TestCase):
         self.assertNotIn("hasty", vocabulary1)
         self.assertIn("hasty", vocabulary2)
 
+    def test_vi(self):
+        """
+        Test mean-field variational inference with example dataset
+        """
+        with open("tests/data/0.txt") as f:
+            text = f.read().lower().split()
+        text, vocabulary = preprocess_standard(text)
 
+        vocab_size = len(vocabulary)
+        batch_size = 250
+        dim = 25
+        e = Embedding(vocabulary=vocabulary, dimensionality=dim)
+
+        ll_before = evaluate_on_holdout_set(e, text, model="cbow", ws=5, batch_size=batch_size)
+        q_mu, q_std_log = mean_field_vi(e, text, model="cbow", evaluate=False, batch_size=batch_size, epochs=10)
+        ll_after = evaluate_on_holdout_set(q_mu, text, model="cbow", ws=5, batch_size=batch_size)
+
+        self.assertLess(ll_before, ll_after)
 
 
 if __name__ == '__main__':
