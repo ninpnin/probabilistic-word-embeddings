@@ -17,6 +17,9 @@ import pkg_resources
 from scipy.spatial.distance import cosine as cos_dist
 from scipy.stats import spearmanr as rank_correlation
 import tensorflow as tf
+import copy
+from .embeddings import Embedding
+import warnings
 
 ###################
 # INTRINSIC EVALUATION #
@@ -119,6 +122,45 @@ def evaluate_word_similarity(embedding, dataset_names=None):
 
     return pd.DataFrame(rows, columns=["Dataset", "Rank Correlation", "No. of Observations", "p-value"])
 
+def nearest_neighbors(embedding, words, K=25):
+    """
+    Evaluate embedding performance on word analogy tasks.
+    
+    Args:
+        embedding: embedding as pwe.embeddings.Embedding
+        dataset (pd.DataFrame): Dataframe where each row has four words, word1 - word2 + word3 ≈ word4
+    """
+    e = copy.deepcopy(embedding)
+    words = [wd for wd in words if wd in embedding]
+    r = len(words)
+    X = embedding[words]
+
+    inv_vocab = {v: k for k, v in e.vocabulary.items()}
+    eliminate = list(range(len(inv_vocab)))
+    eliminate = [0.0 if ("_c" in inv_vocab[i] or inv_vocab[i] in words) else 1.0 for i in eliminate]
+    eliminate = tf.transpose(tf.constant([eliminate], dtype=tf.float64))
+
+    X, _ = tf.linalg.normalize(X, axis=1)
+
+    theta, _ = tf.linalg.normalize(e.theta, axis=1)
+    e.theta.assign(theta)
+
+    Ex = tf.linalg.tensordot(e.theta, X, axes=[1,1])
+    tiled_eliminate = tf.tile(eliminate, [1,r])
+    Ex = tf.multiply(Ex, tiled_eliminate)
+
+    rows = []
+
+    for i in range(r):
+        y_hat = Ex[:,i]
+        _, tops = tf.math.top_k(y_hat, k=K)
+        topwords = [inv_vocab[int(i)] for i in tops]
+        rows.append([words[i]] + topwords)
+    
+    columns = ["target"] + [f"@{i+1}" for i in range(K)]
+    df = pd.DataFrame(rows, columns=columns)
+    return df
+
 def evaluate_analogy(embedding, dataset, K=25):
     """
     Evaluate embedding performance on word analogy tasks.
@@ -176,81 +218,62 @@ def evaluate_analogy(embedding, dataset, K=25):
 # BILINGUAL LEXICON INDUCTION #
 ###############################
 
-def bli(pairs, embedding, precision=[1,5,15], reverse=False):
+def bli(pairs, e, precision=[1,5,15], reverse=False):
     """
     Calculates the Bilingual Lexicon Induction performance of a crosslingual word embedding.
     
     Args:
         pairs: list of word pairs
-        embedding: embedding as a numpy matrix
+        e: embedding as a pwe.Embedding
         precision: Precision level of the BLI score.
         reverse: Reverse the prediction; target language becomes the source language and vice versa.
     """
-
-    vocab = embedding.vocabulary
-    inv_dictionary = {v: k for k, v in vocab.items()}
-    vocab_size = len([wd for wd in vocab if len(wd.split("_")) == 2])
-
-    assert embedding.shape[1] < 1000
-    dim = embedding.shape[1]
-
-    # Normalize word vectors
-    for wd in range(embedding.shape[0]):
-        norm = np.linalg.norm(embedding[wd])
-        if norm > 0.0:
-            embedding[wd] = embedding[wd] / norm
-    
-    correct = { precision_level: 0 for precision_level in precision}
-    N = 0
-
     if reverse:
-        pairs = [(wd_b, wd_a) for wd_a, wd_b in pairs]
+        pairs = [(w2,w1) for w1,w2 in pairs]
 
-    TARGET_LAN = pairs[0][1].split("_")[-1]
+    pairs_prime = []
+    for w1, w2 in pairs:
+        if w1 in e and w2 in e:
+            pairs_prime.append((w1,w2))
+        else:
+            warnings.warn(f"Pair {w1}~{w2} not in embedding. Skipping...")
 
+    pairs = pairs_prime
+    l1, l2 = pairs[0][0].split("_")[-1], pairs[0][1].split("_")[-1]
+    print(l1, "->", l2)
 
-    pairs = [(txt1, txt2) for txt1, txt2 in pairs if txt1 in vocab]
-    outdim = len(pairs)
+    vocab = [wd for wd in e.vocabulary if "_c" != wd[-2:]]
+    assert e.theta.shape[1] < e.theta.shape[0]
+    dim = e.theta.shape[1]
+    embedding = Embedding(set(vocab), dimensionality=dim)
 
-    ETE = np.zeros((outdim, dim))
-    for ix, (txt1, txt2) in enumerate(pairs):
-        ETE[ix] = embedding[vocab[txt1]]
-
-    target_vocab = {}
-    for wd2 in range(vocab_size):
-        langcode = inv_dictionary[wd2].split("_")[-1]
-        if langcode == TARGET_LAN:
-            target_vocab[inv_dictionary[wd2]] = wd2
-
-    ETE_T = np.zeros((len(target_vocab), dim))
-    for ix, (_, wd2) in enumerate(target_vocab.items()):
-        ETE_T[ix] = embedding[wd2]
-
-    ETE = ETE @ ETE_T.T
-    assert ETE.shape[0] != dim and ETE.shape[1] != dim
-    print(ETE)
-    for ix, (txt1, txt2) in progressbar.progressbar(list(enumerate(pairs))):                    
-        wd1 = vocab[txt1]
+    embedding[vocab] = e[vocab]
+    embedding_normalized, _ = tf.linalg.normalize(embedding[vocab], axis=1)
+    embedding[vocab] = embedding_normalized
     
-        dists = {}
-        for ix2, (_, wd2) in enumerate(target_vocab.items()):
-            #vec2 = embedding[wd2]
-            dot = ETE[ix, ix2]
-            dist = 1 - dot
-            dists[inv_dictionary[wd2]] = dist
-        
-        dists = sorted(dists.keys(), key=lambda k: dists[k])
-        
-        #print(dists_head)
-        for precision_level in precision:
-            dists_head = dists[:precision_level]
-            if txt2 in dists_head:
-                correct[precision_level] += 1
-        
-        N += 1
-        #print(txt1, txt2, found)
+    source_words = [p[0] for p in pairs]
+    target_words = [p[1] for p in pairs]
 
-    for precision_level in precision:
-        correct_no = correct[precision_level]
-        print("BLI", correct_no, "/", N, "=", correct_no / N, "precision @", precision_level)
-    return { p: c / N for p, c in correct.items()}
+    target_vocab = [wd for wd in vocab if f"_{l2}" in wd]
+    E_target = embedding[target_vocab]
+    E_source = embedding[source_words]
+
+    A = tf.tensordot(E_target, E_source, axes=[1,1])
+    rows = []
+    print("A shape", A.shape)
+    for i, target_word in enumerate(target_words):
+        source_word = source_words[i]
+        y_hat = A[:,i]
+        _, tops = tf.math.top_k(y_hat, k=max(precision))
+        topwords = [target_vocab[i] for i in tops]
+        row_correct = []
+        for p in precision:
+            topwords_p = topwords[:p]
+            x = target_word in topwords_p
+            row_correct.append(x)
+
+        row = [source_word, target_word] + row_correct + topwords
+        rows.append(row)
+
+    columns = ["source", "target"] + [f"p@{p}" for p in precision] + [f"guess-{g}" for g in range(max(precision))]
+    return pd.DataFrame(rows, columns=columns)
