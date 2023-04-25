@@ -76,7 +76,7 @@ def downsample_common_words(data, counts, cutoff=0.00001, chunk_len=5000000):
 
         return l
 
-def preprocess_standard(text, keep_words=set()):
+def preprocess_standard(text, keep_words=set(), limit=5, downsample=True):
     """
     Standard preprocessing: filter out rare (<=5 occurences) words, downsample common words.
 
@@ -87,14 +87,15 @@ def preprocess_standard(text, keep_words=set()):
         text, vocabulary: text as a list of strs, vocabulary as a set of strs
     """
     N = len(text)
-    text, counts = filter_rare_words(text, keep_words=keep_words)
-    text = downsample_common_words(text, counts)
+    text, counts = filter_rare_words(text, limit=limit, keep_words=keep_words)
+    if downsample:
+        text = downsample_common_words(text, counts)
 
     vocabulary = set(text)
     freqs = {wd: counts[wd] / N for wd in list(vocabulary)}
     return text, freqs
 
-def preprocess_partitioned(texts, labels, keep_words=set()):
+def preprocess_partitioned(texts, labels, keep_words=set(), limit=5, downsample=True):
     """
     Standard preprocessing for partitioned datasets: filter out rare (<=5 occurences) words, downsample common words.
 
@@ -108,8 +109,9 @@ def preprocess_partitioned(texts, labels, keep_words=set()):
     assert len(texts) == len(labels), "Number of data partitions and labels must be equal"
     assert isinstance(texts[0], list), "Data should be provided as a list of lists"
     N = sum([len(t) for t in texts])
-    texts, counts = filter_rare_words(texts, keep_words=keep_words)
-    texts = [downsample_common_words(text, counts) for text in texts]
+    texts, counts = filter_rare_words(texts, limit=limit, keep_words=keep_words)
+    if downsample:
+        texts = [downsample_common_words(text, counts) for text in texts]
 
     def add_subscript(t, subscript):
         if not isinstance(t, tf.Tensor):
