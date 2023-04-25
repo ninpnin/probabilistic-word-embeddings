@@ -136,7 +136,7 @@ def map_estimate(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, ep
         embedding.theta.assign(best_valid_weights)
     return embedding
 
-def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, valid_data=None):
+def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, valid_data=None, elbo_history=False):
     if not isinstance(embedding, Embedding):
         warnings.warn("embedding is not a subclass of probabilistic_word_embeddings.Embedding")
     if model not in ["sgns", "cbow"]:
@@ -157,7 +157,7 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
     opt_std_var = optimizer.add_variable_from_reference(q_std_log, "q_std_log", initial_value=q_std_log)
     optimizer.build([opt_mean_var, opt_std_var])
 
-    
+    elbo_history = []
     for epoch in range(epochs):
         print(f"Epoch {epoch}")
         # Shuffle the order of batches
@@ -165,6 +165,7 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
             similarity = evaluate_word_similarity(embedding)
             print(similarity)
 
+        epoch_logprobs = []
         for batch in progressbar.progressbar(random.sample(range(batches),batches)):
             # Reparametrization trick, Q = mu + sigma * epsilon
             epsilon = tf.random.normal(q_std_log.shape, dtype=tf.float64)
@@ -179,6 +180,7 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
                     log_prob = tf.reduce_sum(cbow_likelihood(e, i, j, x=x)) + e.log_prob(batch_size, N)
                 elif model == "sgns":
                     log_prob = tf.reduce_sum(sgns_likelihood(e, i, j, x=x)) + e.log_prob(batch_size, N)
+                epoch_logprobs.append(log_prob)
                 d_l_d_theta = -tape.gradient(log_prob, embedding.theta) * N / batch_size
             
             d_l_d_q_mean = d_l_d_theta
@@ -189,19 +191,19 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
 
             optimizer.update_step(d_l_d_q_mean, opt_mean_var)
             optimizer.update_step(d_l_q_std_log, opt_std_var)
-            print(opt_mean_var)
-            print(opt_std_var)
             
             q_mean.assign(opt_mean_var)
             q_std_log.assign(opt_std_var)
 
-        print(opt_mean_var)
-        print(opt_std_var)
-
-        print(log_prob)
+        epoch_entropy = tf.reduce_sum(opt_std_var)
+        epoch_elbo = tf.reduce_mean(epoch_logprobs) + epoch_entropy
+        print(f"Epoch ELBO: {epoch_elbo.numpy()}")
         embedding.theta.assign(opt_mean_var)
+        elbo_history.append(epoch_elbo.numpy())
 
     embedding_q_mean = embedding
+    if elbo_history:
+        return embedding_q_mean, q_std_log, elbo_history
     return embedding_q_mean, q_std_log
 
 
