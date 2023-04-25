@@ -82,6 +82,9 @@ def preprocess_standard(text, keep_words=set(), limit=5, downsample=True):
 
     Args:
         text (list): text as a list of strs
+        keep_words: (set): words that are kept in the vocabulary regardless of frequency
+        limit: (int): words with fewer occurences are discarded
+        downsample: whether to do downsampling of common words
 
     Returns:
         text, vocabulary: text as a list of strs, vocabulary as a set of strs
@@ -102,6 +105,9 @@ def preprocess_partitioned(texts, labels, keep_words=set(), limit=5, downsample=
     Args:
         texts (list): list of texts, each element of which is a list of strs
         labels (list): label associated with each 
+        keep_words: (set): words that are kept in the vocabulary regardless of frequency
+        limit: (int): words with fewer occurences are discarded
+        downsample: whether to do downsampling of common words
 
     Returns:
         text, vocabulary: text as a list of list of strs, vocabulary as a set of strs
