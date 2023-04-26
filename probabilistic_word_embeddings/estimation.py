@@ -180,7 +180,7 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
                     log_prob = tf.reduce_sum(cbow_likelihood(e, i, j, x=x)) + e.log_prob(batch_size, N)
                 elif model == "sgns":
                     log_prob = tf.reduce_sum(sgns_likelihood(e, i, j, x=x)) + e.log_prob(batch_size, N)
-                epoch_logprobs.append(log_prob)
+                epoch_logprobs.append(log_prob * N / batch_size)
                 d_l_d_theta = -tape.gradient(log_prob, embedding.theta) * N / batch_size
             
             d_l_d_q_mean = d_l_d_theta
