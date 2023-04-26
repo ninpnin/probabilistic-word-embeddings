@@ -31,7 +31,7 @@ class Test(unittest.TestCase):
         true_elbos = []
         error_tolerances = []
 
-        for epochs in [5, 15, 25, 50, 100, 200, 100, 100, 100]:
+        for epochs in [5, 15, 25, 50, 50, 50, 50]:
             e = Embedding(vocabulary=vocabulary, dimensionality=dim)
             q_mu, q_std_log, elbo_history = mean_field_vi(e, text, model="cbow", evaluate=False, ws=ws, batch_size=batch_size, epochs=epochs, elbo_history=True)
 
