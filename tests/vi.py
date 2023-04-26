@@ -9,6 +9,8 @@ import tensorflow_probability as tfp
 import numpy as np
 from pathlib import Path
 import random
+import os
+os.environ['PROGRESSBAR_MINIMUM_UPDATE_INTERVAL'] = "30"
 
 class Test(unittest.TestCase):
 
