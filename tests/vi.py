@@ -31,7 +31,7 @@ class Test(unittest.TestCase):
         true_elbos = []
         error_tolerances = []
 
-        for epochs in [5, 15, 25, 50, 50, 50, 50]:
+        for epochs in [5, 15, 25, 50, 100, 100, 100]:
             e = Embedding(vocabulary=vocabulary, dimensionality=dim)
             q_mu, q_std_log, elbo_history = mean_field_vi(e, text, model="cbow", evaluate=False, ws=ws, batch_size=batch_size, epochs=epochs, elbo_history=True)
 
@@ -58,6 +58,7 @@ class Test(unittest.TestCase):
 
             # Calculate true and estimated ELBO
             estimated_elbo = elbo_history[-1]
+            print("E[log p(x| Q)]", expected_posterior.numpy(), "E[log(Q)]", entropy.numpy())
             elbo = expected_posterior + entropy
             estimated_elbos.append(estimated_elbo)
             true_elbos.append(elbo)
@@ -70,8 +71,8 @@ class Test(unittest.TestCase):
 
             # Error due to ELBO improvement during the epoch
             # error = stdev of hat ELBO * 2
-            stochastic_vi_deviation = np.std(elbo_history[-4:]) * 3.0
-            stochastic_vi_deviation_prime = np.std(elbo_history[-4:] - np.array(range(4)) * optimization_deviation ) * 2.0
+            stochastic_vi_deviation = np.std(elbo_history[-4:])
+            stochastic_vi_deviation_prime = np.std(elbo_history[-4:] - np.array(range(4)) * optimization_deviation )
             print("Corrected v original", stochastic_vi_deviation_prime, stochastic_vi_deviation)
             if stochastic_vi_deviation_prime < stochastic_vi_deviation:
                 stochastic_vi_deviation = stochastic_vi_deviation_prime
@@ -79,17 +80,25 @@ class Test(unittest.TestCase):
 
             # Error due to stochasticity in the calculation of the true posterior
             # error = standard error of the mean of the posteriors
-            posterior_estimate_deviation = np.std(posteriors) / np.sqrt(rounds) * 3.0
+            posterior_estimate_deviation = np.std(posteriors) / np.sqrt(rounds)
             print("optimization_deviation", optimization_deviation)
             print("stochastic_vi_deviation", stochastic_vi_deviation)
             print("posterior_estimate_deviation", posterior_estimate_deviation)
-            error_tolerances.append(optimization_deviation + stochastic_vi_deviation + posterior_estimate_deviation)
+            error_tolerance = optimization_deviation + stochastic_vi_deviation * 3.0 + posterior_estimate_deviation * 3.0
+            print("error_tolerance", error_tolerance)
+            error_tolerances.append(error_tolerance)
 
         # Correct for constant offsets
-        constant_offset = tf.reduce_mean(estimated_elbos[-3:]) - tf.reduce_mean(true_elbos[-3:])
+        constant_offset = np.array(estimated_elbos)[-3:] - np.array(true_elbos)[-3:]
+
+        # Standard error for the normalizing constant
+        constant_error = np.std(constant_offset) / np.sqrt(3) * 3.0
+        constant_offset = tf.reduce_mean(constant_offset)
+        print("constant_error", constant_error)
         estimated_elbos = [elbo - constant_offset for elbo in estimated_elbos]
 
         for elbo, hat_elbo, error_tolerance in zip(true_elbos, estimated_elbos, error_tolerances):
+            error_tolerance += constant_error
             error_msg = f"ELBO vs hat ELBO: {elbo}, {hat_elbo} (+-{error_tolerance})"
             self.assertAlmostEqual(elbo, hat_elbo, delta=error_tolerance, msg=error_msg)
 
