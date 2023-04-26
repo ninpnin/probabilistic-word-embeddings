@@ -21,8 +21,13 @@ jobs:
         python -m pip install --upgrade pip
         pip install .
 
-    - name: Test with unittest
+    - name: Test embeddings
       run: |
-        python -m unittest tests.estimation
         python -m unittest tests.embeddings
+    - name: Test MAP estimation
+      run: |
+        python -m unittest tests.map
+    - name: Test variational inference
+      run: |
+        python -m unittest tests.vi
 
