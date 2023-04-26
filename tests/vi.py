@@ -29,7 +29,7 @@ class Test(unittest.TestCase):
         true_elbos = []
         error_tolerances = []
 
-        for epochs in [5, 15, 25, 50, 50, 50]:
+        for epochs in [5, 15, 25, 50, 100, 200, 100, 100, 100]:
             e = Embedding(vocabulary=vocabulary, dimensionality=dim)
             q_mu, q_std_log, elbo_history = mean_field_vi(e, text, model="cbow", evaluate=False, ws=ws, batch_size=batch_size, epochs=epochs, elbo_history=True)
 
@@ -88,8 +88,8 @@ class Test(unittest.TestCase):
         estimated_elbos = [elbo - constant_offset for elbo in estimated_elbos]
 
         for elbo, hat_elbo, error_tolerance in zip(true_elbos, estimated_elbos, error_tolerances):
-            print("ELBO vs hat ELBO", elbo, hat_elbo, f"(+-{error_tolerance})")
-            self.assertAlmostEqual(elbo, hat_elbo, delta=error_tolerance)
+            error_msg = f"ELBO vs hat ELBO: {elbo}, {hat_elbo} (+-{error_tolerance})"
+            self.assertAlmostEqual(elbo, hat_elbo, delta=error_tolerance, msg=error_msg)
 
 
 
