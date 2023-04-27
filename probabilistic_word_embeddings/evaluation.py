@@ -122,7 +122,7 @@ def evaluate_word_similarity(embedding, dataset_names=None):
 
     return pd.DataFrame(rows, columns=["Dataset", "Rank Correlation", "No. of Observations", "p-value"])
 
-def nearest_neighbors(embedding, words, K=25, epsilon=0.00001):
+def nearest_neighbors(embedding, words, K=25, epsilon=1e-10):
     """
     Evaluate embedding performance on word analogy tasks.
     
@@ -131,13 +131,15 @@ def nearest_neighbors(embedding, words, K=25, epsilon=0.00001):
         dataset (pd.DataFrame): Dataframe where each row has four words, word1 - word2 + word3 ≈ word4
     """
     e = copy.deepcopy(embedding)
+    noise = tf.random.normal(shape=e.theta.shape, dtype=tf.float64) * epsilon
+    e.theta.assign_add(noise)
     words = [wd for wd in words if wd in embedding]
     r = len(words)
     X = embedding[words]
 
     inv_vocab = {v: k for k, v in e.vocabulary.items()}
     eliminate = list(range(len(inv_vocab)))
-    eliminate = [-100.0 if ("_c" in inv_vocab[i] or inv_vocab[i] in words) else 0.0 - epsilon for i in eliminate]
+    eliminate = [-100.0 if ("_c" in inv_vocab[i] or inv_vocab[i] in words) else 0.0 for i in eliminate]
     eliminate = tf.transpose(tf.constant([eliminate], dtype=tf.float64))
 
     X, _ = tf.linalg.normalize(X, axis=1)
