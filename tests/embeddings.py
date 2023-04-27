@@ -261,6 +261,38 @@ class EmbeddingTest(unittest.TestCase):
                 wd, wd_hat = wordpair
                 self.assertEqual(wd, wd_hat)
 
+    def test_nearest_neighbors_arguments(self):
+        """
+        Test that different values of K give same results
+        """
+        with open("tests/data/0.txt") as f:
+            text = f.read().replace(".", "").lower().split()
+        text, vocabulary = preprocess_standard(text)
+        dim = 25
+
+        target = "friend"
+        nearest = ["face", "distress", "sleep"]
+
+        e = Embedding(vocabulary=vocabulary, dimensionality=dim)
+
+        nearest25 = nearest_neighbors(e, [target], K=25)
+        nearest3 = nearest_neighbors(e, [target], K=3)
+        nearest2 = nearest_neighbors(e, [target], K=2)
+        nearest1 = nearest_neighbors(e, [target], K=1)
+
+        p2_25 = list(nearest25["@2"])[0]
+        p2_3 = list(nearest3["@2"])[0]
+        p2_2 = list(nearest3["@2"])[0]
+
+        self.assertEqual(p2_3, p2_25)
+        self.assertEqual(p2_3, p2_2)
+
+        p1_3 = list(nearest3["@1"])[0]
+        p1_2 = list(nearest3["@1"])[0]
+        p1_1 = list(nearest3["@1"])[0]
+
+        self.assertEqual(p1_3, p1_2)
+        self.assertEqual(p1_3, p1_1)
 
 if __name__ == '__main__':
     # begin the unittest.main()
