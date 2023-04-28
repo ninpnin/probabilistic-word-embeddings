@@ -140,6 +140,7 @@ class Test(unittest.TestCase):
         g.add_edge("dog", "dogs")
         g.add_edge("cat", "cats")
         g.add_edge("cat", "dog")
+        g.add_edge("this", "that")
 
         e = LaplacianEmbedding(vocabulary=vocabulary, dimensionality=dim, graph=g)
         theta_before = e.theta.numpy()
