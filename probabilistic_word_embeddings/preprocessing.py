@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from .utils import dict_to_tf, transitive_dict
+from .utils import dict_to_tf
 import progressbar
 
 def filter_rare_words(data, limit=5, keep_words=set()):

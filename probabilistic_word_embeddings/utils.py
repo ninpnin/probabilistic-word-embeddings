@@ -21,39 +21,6 @@ def shuffled_indices(data_len, batch_len):
         array = tf.random.shuffle(array)
         return array
 
-# Sparse matrices
-def dict_to_sparse(tensor_dict, shape):
-    indices = []
-    values = []
-    
-    for index, value in tensor_dict.items():
-        ix1, ix2 = index
-        
-        index = [ix1, ix2]
-        indices.append(index)
-        values.append(value)
-        
-    tf.sparse.SparseTensor(indices=indices, values=values, dense_shape=shape, dtype=dtype)
-
-def scipy_to_tf_sparse(X, dtype=None):
-    coo = X.tocoo()
-    indices = np.mat([coo.row, coo.col]).transpose()
-    values = coo.data
-    if dtype is not None:
-        values = tf.constant(values, dtype=dtype)
-
-    return tf.SparseTensor(indices, values, coo.shape)
-
-def save_sparse(stensor, fpath):
-    tensor_f = open(fpath, "wb")
-    pickle.dump(stensor, tensor_f)
-    
-def load_sparse(fpath):
-    tensor_f = open(fpath, 'rb')
-    stensor = pickle.load(tensor_f)
-    tensor_f.close()
-    return stensor
-
 def dict_to_tf(d):
     keys = list(d.keys())
     values = list(d.values())
@@ -67,17 +34,6 @@ def dict_to_tf(d):
         name="class_weight"
     )
     return table
-
-# Combined function x : c(x) = b(a(x))
-def transitive_dict(a, b):
-    c = {}
-    
-    for key_a in a.keys():
-        key_b = a[key_a]
-        if key_b in b:
-            c[key_a] = b[key_b]
-        
-    return c
 
 def align(e_reference, e, words, words_reference=None):
     """
