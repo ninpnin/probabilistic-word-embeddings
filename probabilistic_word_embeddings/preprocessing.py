@@ -9,6 +9,8 @@ def filter_rare_words(data, limit=5, keep_words=set()):
     
     Args:
         data (list): list of strs
+        limit: (int): words with fewer occurences are discarded
+        keep_words (set): set of words that are always included regardless of frequency
     
     Returns:
         data, counts: list of strs and word counts as a dict
@@ -40,7 +42,8 @@ def downsample_common_words(data, counts, cutoff=0.00001, chunk_len=5000000):
         data (Union[list, tf.Tensor]): list of strs or tf.Tensor of strings
         counts (dict): word counts in the dataset
         cutoff (float): lowest word frequency for when downsampling is applied
-    
+        chunk_len (int): the number of words that are processed at a time to restrict memory use
+
     Returns:
         list of strs
     """

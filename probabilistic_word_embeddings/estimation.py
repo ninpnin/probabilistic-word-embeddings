@@ -27,6 +27,7 @@ def map_estimate(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, ep
         batch_size (int): Batch size in the training process 
         epochs (int): The number of passes over the data.
         evaluate (bool): Whether to run word similarity evaluation during training on the standard English evaluation data sets
+        vocab_freqs (dict): The frequencies of the word used for negative sampling. If not provided, the word frequencies are calculated from 'data'.
         valid_data: Data as a list of python strings.
         early_stopping (bool): Wheter to only save the best model according to the validation loss. Requires valid_data.
         profile (bool): whether to run the tensorflow profiler during training
@@ -137,6 +138,24 @@ def map_estimate(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, ep
     return embedding
 
 def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, valid_data=None, elbo_history=False):
+    """
+    Perform mean-field variational inference.
+    
+    Args:
+        embedding: Embedding with a suitable vocabulary and log_prob function. Subclass of pwe.Embedding
+        data: Data as a list of python strings.
+        model (str): Word embedding model, either 'sgns' or 'cbow'.
+        ws (int): SGNS or CBOW window size
+        ns (int): SGNS or CBOW number of negative samples
+        batch_size (int): Batch size in the training process 
+        epochs (int): The number of passes over the data.
+        evaluate (bool): Whether to run word similarity evaluation during training on the standard English evaluation data sets
+        valid_data: Data as a list of python strings.
+        elbo_history (bool): Whether to return the ELBO history as a list
+    
+    Returns:
+        A tuple consisting of the means as a pwe.Embedding and the standard deviations as an np.array
+    """
     if not isinstance(embedding, Embedding):
         warnings.warn("embedding is not a subclass of probabilistic_word_embeddings.Embedding")
     if model not in ["sgns", "cbow"]:

@@ -124,11 +124,13 @@ def evaluate_word_similarity(embedding, dataset_names=None):
 
 def nearest_neighbors(embedding, words, K=25, epsilon=1e-10):
     """
-    Evaluate embedding performance on word analogy tasks.
+    Get the K nearest neighbors using cosine distance
     
     Args:
         embedding: embedding as pwe.embeddings.Embedding
-        dataset (pd.DataFrame): Dataframe where each row has four words, word1 - word2 + word3 ≈ word4
+        words (list): List of words for which the nearest neighbors are fetched
+        K (int): the number of nearest neighbors per word
+        epsilon (float): the noise injected to the embedding to numerical issues. For most uses, the default value is ok.
     """
     e = copy.deepcopy(embedding)
     noise = tf.random.normal(shape=e.theta.shape, dtype=tf.float64) * epsilon
@@ -222,7 +224,7 @@ def evaluate_analogy(embedding, dataset, K=25):
 
 def bli(pairs, e, precision=[1,5,15], reverse=False):
     """
-    Calculates the Bilingual Lexicon Induction performance of a crosslingual word embedding.
+    Calculate the Bilingual Lexicon Induction performance of a crosslingual word embedding.
     
     Args:
         pairs: list of word pairs
