@@ -52,10 +52,16 @@ def evaluate_on_holdout_set(embedding, data, model="sgns", ws=5, ns=5, batch_siz
         start_ix = batch_size * batch
         if model == "sgns":
             i,j,x  = generate_sgns_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix)
-            valid_ll = tf.concat([valid_ll, sgns_likelihood(embedding, i, j, x=x)], axis=0)
+            valid_ll_batch = sgns_likelihood(embedding, i, j, x=x)
         elif model == "cbow":
             i,j,x  = generate_cbow_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix)
-            valid_ll = tf.concat([valid_ll, cbow_likelihood(embedding, i, j, x=x)], axis=0)
+            valid_ll_batch = cbow_likelihood(embedding, i, j, x=x)
+
+        # Reduce memory footprint by calculating the mean on the fly
+        if reduce_mean:
+            valid_ll_batch = tf.expand_dims(tf.reduce_mean(valid_ll_batch), 0)
+
+        valid_ll = tf.concat([valid_ll, valid_ll_batch], axis=0)
 
     if reduce_mean:
         return tf.reduce_mean(valid_ll)
