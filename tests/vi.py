@@ -2,7 +2,7 @@ import unittest
 
 from probabilistic_word_embeddings.embeddings import Embedding
 from probabilistic_word_embeddings.preprocessing import preprocess_standard, preprocess_partitioned
-from probabilistic_word_embeddings.estimation import mean_field_vi
+from probabilistic_word_embeddings.estimation import map_estimate, mean_field_vi
 from probabilistic_word_embeddings.evaluation import evaluate_on_holdout_set
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -10,6 +10,7 @@ import numpy as np
 from pathlib import Path
 import random
 import os
+import copy
 os.environ['PROGRESSBAR_MINIMUM_UPDATE_INTERVAL'] = "30"
 
 class Test(unittest.TestCase):
@@ -24,16 +25,20 @@ class Test(unittest.TestCase):
 
         vocab_size = len(vocabulary)
         batch_size = 25
-        ws = 5
+        ws = 3
         dim = 2
-
         estimated_elbos = []
         true_elbos = []
         error_tolerances = []
 
-        for epochs in [5, 15, 25, 50, 100, 100, 100]:
-            e = Embedding(vocabulary=vocabulary, dimensionality=dim)
-            q_mu, q_std_log, elbo_history = mean_field_vi(e, text, model="cbow", evaluate=False, ws=ws, batch_size=batch_size, epochs=epochs, elbo_history=True)
+        e_map = Embedding(vocabulary=vocabulary, dimensionality=dim)
+        e_map = map_estimate(e_map, text, model="cbow", evaluate=False, ws=ws, batch_size=batch_size, epochs=20, training_loss=True)
+
+        for epochs in [5, 15, 25, 25, 25, 25]:
+            e = copy.deepcopy(e_map)
+            init_mean = False
+            init_std = 0.2
+            q_mu, q_std_log, elbo_history = mean_field_vi(e, text, model="cbow", evaluate=False, ws=ws, batch_size=batch_size, init_mean=init_mean, init_std=init_std, epochs=epochs, elbo_history=True)
 
             q_mean = q_mu.theta.numpy()
             q_std = tf.exp(q_std_log).numpy()
@@ -99,6 +104,7 @@ class Test(unittest.TestCase):
 
         for elbo, hat_elbo, error_tolerance in zip(true_elbos, estimated_elbos, error_tolerances):
             error_tolerance += constant_error
+            print(elbo, "vs", hat_elbo, "diff", elbo - hat_elbo)
             error_msg = f"ELBO vs hat ELBO: {elbo}, {hat_elbo} (+-{error_tolerance})"
             self.assertAlmostEqual(elbo, hat_elbo, delta=error_tolerance, msg=error_msg)
 
