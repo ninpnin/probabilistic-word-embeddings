@@ -137,7 +137,7 @@ def map_estimate(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, ep
         embedding.theta.assign(best_valid_weights)
     return embedding
 
-def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, valid_data=None, elbo_history=False):
+def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, init_mean=True, init_std=0.05, evaluate=True, valid_data=None, elbo_history=False):
     """
     Perform mean-field variational inference.
     
@@ -149,6 +149,8 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
         ns (int): SGNS or CBOW number of negative samples
         batch_size (int): Batch size in the training process 
         epochs (int): The number of passes over the data.
+        init_mean (bool): Randomize the initial values of the embedding. If False, uses the values provided in the 'embedding' argument.
+        init_std (float / np.array / tf.Tensor): Default value for the standard deviations. Can be a scalar (float) or an array (np.array / tf.Tensor)
         evaluate (bool): Whether to run word similarity evaluation during training on the standard English evaluation data sets
         valid_data: Data as a list of python strings.
         elbo_history (bool): Whether to return the ELBO history as a list
@@ -169,8 +171,14 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
     N = len(data)
     batches = N // batch_size
     
-    q_mean = tf.Variable(tf.random.normal(e.theta.shape, dtype=tf.float64)* 0.00001)
-    q_std_log =  tf.Variable(tf.random.normal(e.theta.shape, dtype=tf.float64)* 0.00001 - 3.0)
+    q_mean_init = embedding.theta
+    if init_mean:
+        q_mean_init = tf.random.normal(e.theta.shape, dtype=tf.float64) * 0.00001
+    q_mean = tf.Variable(q_mean_init)
+    if type(init_std) == float:
+        init_std = tf.random.normal(e.theta.shape, dtype=tf.float64)* 0.00001 + tf.cast(tf.math.log(init_std), dtype=tf.float64)
+        print(init_std)
+    q_std_log =  tf.Variable(init_std)
     
     opt_mean_var = optimizer.add_variable_from_reference(q_mean, "q_mean", initial_value=q_mean)
     opt_std_var = optimizer.add_variable_from_reference(q_std_log, "q_std_log", initial_value=q_std_log)
