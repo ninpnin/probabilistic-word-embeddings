@@ -67,3 +67,33 @@ def align(e_reference, e, words, words_reference=None):
 
     return e
 
+def _normalize_word(wd):
+    context_vector = "_c" in wd
+    wd = wd.split("_")[0]
+
+    if context_vector:
+        wd = f"{wd}_c"
+
+    return wd
+
+def transfer_embeddings(e_source, e_target, ignore_group=False):
+    """
+    Transfer all embeddings for shared vocabulary from one embedding to another.
+    """
+    source_vocab = e_source.vocabulary
+    target_vocab = e_target.vocabulary
+    if not ignore_group:
+        vocab = {wd: ix for wd, ix in target_vocab.items() if wd in source_vocab}
+
+        # Make unique
+        vocab = {v: k for k, v in vocab.items()}
+        words = list(vocab.values())
+        e_target[words] = e_source[words]
+    else:
+        source_vocab_normalized = {_normalize_word(wd): wd for wd in source_vocab}
+        target_vocab = {wd: ix for wd, ix in target_vocab.items() if _normalize_word(wd) in source_vocab_normalized}
+        target_vocab = {v: k for k, v in target_vocab.items()}
+        target_words = list(target_vocab.values())
+        source_words = [source_vocab_normalized[_normalize_word(wd)] for wd in target_words]
+        e_target[target_words] = e_source[source_words]
+    return e_target
