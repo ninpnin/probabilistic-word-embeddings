@@ -4,7 +4,7 @@ from probabilistic_word_embeddings.embeddings import Embedding, LaplacianEmbeddi
 from probabilistic_word_embeddings.preprocessing import preprocess_standard, preprocess_partitioned
 from probabilistic_word_embeddings.estimation import map_estimate
 from probabilistic_word_embeddings.evaluation import embedding_similarities, evaluate_word_similarity, evaluate_analogy, nearest_neighbors
-from probabilistic_word_embeddings.utils import align
+from probabilistic_word_embeddings.utils import align, transfer_embeddings
 import tensorflow as tf
 import numpy as np
 import pandas as pd
@@ -293,6 +293,48 @@ class EmbeddingTest(unittest.TestCase):
 
         self.assertEqual(p1_3, p1_2)
         self.assertEqual(p1_3, p1_1)
+
+    def test_transfer_embeddings(self):
+        vocabulary1 = {"moi", "mitä", "kuuluu"}
+        vocabulary2 = {"moi", "mitä", "joo"}
+        dim = 10
+        e1 = Embedding(vocabulary=vocabulary1, dimensionality=dim)
+        e2 = Embedding(vocabulary=vocabulary2, dimensionality=dim)
+
+        vocab_intersection = list(vocabulary1.intersection(vocabulary2))
+        diff = tf.reduce_sum(tf.math.abs(e1[vocab_intersection] - e2[vocab_intersection])).numpy()
+        self.assertNotEqual(0.0, diff)
+
+        e2 = transfer_embeddings(e1, e2)
+
+        diff = tf.reduce_sum(tf.math.abs(e1[vocab_intersection] - e2[vocab_intersection])).numpy()
+        self.assertAlmostEqual(0.0, diff)
+
+        vocabulary1 = [f"{wd}_time1" for wd in list(vocabulary1)] + [f"{wd}_time2" for wd in list(vocabulary1)]
+        vocabulary1 = set(vocabulary1)
+        e1 = Embedding(vocabulary=vocabulary1, dimensionality=dim)
+        e2 = Embedding(vocabulary=vocabulary2, dimensionality=dim)
+
+        for wd in list(vocabulary1):
+            wd_normalized = wd.split("_")[0]
+            if wd_normalized in e2:
+                diff = tf.reduce_sum(tf.math.abs(e1[wd] - e2[wd_normalized])).numpy()
+                self.assertNotEqual(0.0, diff)
+
+                diff = tf.reduce_sum(tf.math.abs(e1[wd + "_c"] - e2[wd_normalized + "_c"])).numpy()
+                self.assertNotEqual(0.0, diff)
+
+        e1 = transfer_embeddings(e2, e1, ignore_group=True)
+
+        for wd in list(vocabulary1):
+            wd_normalized = wd.split("_")[0]
+            if wd_normalized in e2:
+                diff = tf.reduce_sum(tf.math.abs(e1[wd] - e2[wd_normalized])).numpy()
+                self.assertAlmostEqual(0.0, diff)
+
+                diff = tf.reduce_sum(tf.math.abs(e1[wd + "_c"] - e2[wd_normalized + "_c"])).numpy()
+                self.assertAlmostEqual(0.0, diff)
+
 
 if __name__ == '__main__':
     # begin the unittest.main()
