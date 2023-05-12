@@ -45,13 +45,24 @@ class Embedding:
             self.lambda0 = d["lambda0"]
 
     @tf.function
-    def __getitem__(self, item):
+    def _get_embeddings(self, item):
         if type(item) == str:
             return self.theta[self.vocabulary[item]]
         elif isinstance(item, list):
             item = tf.constant(item)
+
         ix = self.tf_vocabulary.lookup(item)
         return tf.gather(self.theta, ix, axis=0)
+
+    def __getitem__(self, item):
+        try:
+            embs = self._get_embeddings(item)
+        except:
+            error_msg = f'Embeddings for an object of type {type(item)} cannot be fetched. '
+            error_msg += 'Check that you provide the word(s) as a str or a list of strs, '
+            error_msg += 'as well as that the words are all elements are in the embedding.'
+            raise ValueError(error_msg)
+        return embs
 
     def __setitem__(self, item, new_value):
         #self.theta = self.theta - self.theta[]

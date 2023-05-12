@@ -335,6 +335,25 @@ class EmbeddingTest(unittest.TestCase):
                 diff = tf.reduce_sum(tf.math.abs(e1[wd + "_c"] - e2[wd_normalized + "_c"])).numpy()
                 self.assertAlmostEqual(0.0, diff)
 
+    def test_keyerror(self):
+        vocabulary1 = {"moi", "mitä", "kuuluu"}
+        dim = 10
+        e1 = Embedding(vocabulary=vocabulary1, dimensionality=dim)
+
+        try:
+            val = e1["äksdee"]
+            assert val == None
+        except ValueError as e:
+            print(f"Caught error {e}")
+
+        val = e1[["moi"]]
+
+        try:
+            val = e1[["äksdee", "moi"]]
+            assert val == None
+        except ValueError as e:
+            print(f"Caught error {e}")
+   
 
 if __name__ == '__main__':
     # begin the unittest.main()
