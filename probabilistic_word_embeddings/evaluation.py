@@ -27,7 +27,7 @@ import warnings
 
 from .models import generate_sgns_batch, sgns_likelihood
 from .models import generate_cbow_batch, cbow_likelihood
-def evaluate_on_holdout_set(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, reduce_mean=True):
+def evaluate_on_holdout_set(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, metric="likelihood", reduce_mean=True):
     """
     Evaluate the performance of an embedding on a holdout set
     
@@ -43,6 +43,7 @@ def evaluate_on_holdout_set(embedding, data, model="sgns", ws=5, ns=5, batch_siz
     Returns:
         Validation performance as a tf.Tensor
     """
+    assert metric in ["likelihood", "accuracy"]
     if not isinstance(data, tf.Tensor):
         data = tf.constant(data)
     valid_batches = len(data) // batch_size
@@ -57,6 +58,10 @@ def evaluate_on_holdout_set(embedding, data, model="sgns", ws=5, ns=5, batch_siz
             i,j,x  = generate_cbow_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix)
             valid_ll_batch = cbow_likelihood(embedding, i, j, x=x)
 
+        if metric == "accuracy":
+            limit = tf.ones(valid_ll_batch.shape, dtype=valid_ll_batch.dtype) * tf.cast(tf.math.log(0.5), dtype=valid_ll_batch.dtype)
+            valid_ll_batch = tf.math.sign(valid_ll_batch - limit)
+            valid_ll_batch = valid_ll_batch / 2.0 + 0.5
         # Reduce memory footprint by calculating the mean on the fly
         if reduce_mean:
             valid_ll_batch = tf.expand_dims(tf.reduce_mean(valid_ll_batch), 0)
