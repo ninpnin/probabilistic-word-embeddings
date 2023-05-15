@@ -236,6 +236,22 @@ class Test(unittest.TestCase):
         test_ll = evaluate_on_holdout_set(e, text, model="sgns", ws=5, batch_size=len(text))
         self.assertLess(test_ll, 0.0)
 
+    def test_holdout_accuracy(self):
+        """
+        Test evaluation of an embedding on a holdout set
+        """
+        with open("tests/data/0.txt") as f:
+            text = f.read().lower().split()
+        text, vocabulary = preprocess_standard(text)
+
+        dim = 25
+        e = Embedding(vocabulary=vocabulary, dimensionality=dim)
+
+        test_acc = evaluate_on_holdout_set(e, text, model="cbow", ws=5, batch_size=len(text), metric="accuracy")
+        print(f"Test accuracy: {test_acc}")
+        self.assertLess(0.0, test_acc)
+        self.assertLess(test_acc, 1.0)
+
     def test_keep_words(self):
         with open("tests/data/0.txt") as f:
             text = f.read().lower().split()
