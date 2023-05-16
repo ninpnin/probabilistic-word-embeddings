@@ -1,13 +1,13 @@
 from probabilistic_word_embeddings.embeddings import Embedding
 from probabilistic_word_embeddings.preprocessing import preprocess_standard
 from probabilistic_word_embeddings.estimation import map_estimate
-from probabilistic_word_embeddings.evaluation import get_eval_file, embedding_similarities, evaluate_word_similarity
+from probabilistic_word_embeddings.evaluation import embedding_similarities, evaluate_word_similarity
 from probabilistic_word_embeddings.evaluation import evaluate_on_holdout_set
 from scipy.spatial.distance import cosine as cos_dist
 import tensorflow as tf
 
 print("Preprocess...")
-with open("wiki.txt") as f:
+with open("examples/data/wikismall.txt") as f:
 	text = f.read().lower().split()
 text, vocabulary = preprocess_standard(text)
 
@@ -26,7 +26,7 @@ dim = 100
 e = Embedding(vocabulary=vocabulary, dimensionality=dim)
 
 # Perform MAP estimation
-e = map_estimate(e, text_train, model="cbow", ws=5, valid_data=text_valid, epochs=2, evaluate=False, early_stopping=True)
+e = map_estimate(e, text_train, model="cbow", ws=5, valid_data=text_valid, epochs=5, evaluate=False, early_stopping=True)
 
 similarity = evaluate_word_similarity(e)
 print(similarity)
@@ -39,7 +39,9 @@ print("Cosdist 'this', 'motion'", cos_dist(e["this"], e["motion"]))
 
 # Evaluate on test set
 test_ll = evaluate_on_holdout_set(e, text_test, model="cbow", ws=5)
+test_acc = evaluate_on_holdout_set(e, text_test, model="cbow", ws=5, metric="accuracy")
 
-print(f"Test set performance: {test_ll}")
+print(f"Test set likelihood: {test_ll}")
+print(f"Test set accuracy: {test_acc}")
 
 e.save("embeddings.pkl")
