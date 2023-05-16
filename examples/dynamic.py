@@ -6,7 +6,7 @@ import pandas as pd
 import re, itertools
 
 # Aggregate to yearly string objects and their associated years
-df = pd.read_csv("dynamic.csv")
+df = pd.read_csv("examples/data/dynamic.csv")
 texts, years = [], sorted(list(set(df["year"])))
 for year in years:
 	current = df[df["year"] == year]
