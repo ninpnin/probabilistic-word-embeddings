@@ -2,7 +2,25 @@ import numpy as np
 import tensorflow as tf
 import pickle
 import warnings
-    
+import logging, colorlog
+import sys
+logging.TRAIN = 25
+logging.addLevelName(logging.TRAIN, 'TRAIN')
+
+def get_logger(loglevel, name="log"):
+    handler = colorlog.StreamHandler(stream=sys.stdout)
+    LOG_COLORS = {'DEBUG':'cyan', 'INFO':'green', 'TRAIN':'blue', 'WARNING':'yellow', 'ERROR': 'red', 'CRITICAL':'red,bg_white'}
+    handler.setFormatter(colorlog.ColoredFormatter('%(log_color)s%(asctime)s [%(levelname)s] %(white)s(%(name)s)%(reset)s: %(message)s',
+        log_colors=LOG_COLORS,
+        datefmt="%H:%M:%S",
+        stream=sys.stdout))
+    logger = colorlog.getLogger(name)
+    logger.addHandler(handler)
+    logger.setLevel(loglevel)
+    logger.propagate = False
+
+    return logger
+
 # MAP estimation
 #@tf.function
 def shuffled_indices(data_len, batch_len):

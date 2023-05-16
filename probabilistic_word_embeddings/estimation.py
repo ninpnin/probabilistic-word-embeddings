@@ -3,6 +3,7 @@ import tensorflow as tf
 import numpy as np
 # Load model from models.py
 from .utils import shuffled_indices
+from .utils import get_logger
 from .embeddings import Embedding
 from .models import generate_batch
 from .models import generate_cbow_batch, cbow_likelihood, sgns_likelihood
@@ -13,8 +14,9 @@ import progressbar
 from scipy.spatial.distance import cosine as cos_dist
 import random, warnings
 import sys
+import logging
 
-def map_estimate(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, vocab_freqs=None, valid_data=None, early_stopping=False, profile=False, training_loss=False):
+def map_estimate(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, vocab_freqs=None, valid_data=None, early_stopping=False, profile=False, training_loss=True, loglevel="DEBUG"):
     """
     Perform MAP estimation.
     
@@ -36,6 +38,8 @@ def map_estimate(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, ep
     Returns:
         Trained embedding
     """
+    logger = get_logger(loglevel, name="map")
+
     if not isinstance(embedding, Embedding):
         warnings.warn("embedding is not a subclass of probabilistic_word_embeddings.Embedding")
     if model not in ["sgns", "cbow"]:
@@ -72,7 +76,7 @@ def map_estimate(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, ep
             freqs = [vocab_freqs[wd] for wd in vocab]
             vocab = tf.constant(vocab)
             logits = 3/4 * tf.math.log(tf.constant([freqs]))
-            print("Randomize negative sample dataset...")
+            logger.debug("Randomize negative sample dataset...")
             ns_batch_size = (500 * 1000 * 1000) // len(vocab)
             ns_batches = N // ns_batch_size
             ns_data = []
@@ -90,7 +94,7 @@ def map_estimate(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, ep
             assert len(ns_data) == len(data), f"{len(ns_data)} vs {len(data)}"
 
     for epoch in range(epochs):
-        print(f"Epoch {epoch}")
+        logger.log(logging.TRAIN, f"Epoch {epoch}")
         
         if evaluate:
             similarity = evaluate_word_similarity(embedding)
@@ -100,11 +104,11 @@ def map_estimate(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, ep
             print("Weighted average", wa)
 
         if valid_data is not None:
-            print("validate...")
+            logger.debug("validate...")
             valid_ll = evaluate_on_holdout_set(embedding, valid_data, model=model, ws=ws, ns=ns, batch_size=batch_size)
-            print(f"Mean validation likelihood: {valid_ll}")
+            logger.log(logging.TRAIN, f"Mean validation likelihood: {valid_ll}")
             if best_valid_performance is not None and valid_ll > best_valid_performance:
-                print(f"{valid_ll} is better than previous best {best_valid_performance}")
+                logger.log(logging.TRAIN, f"{valid_ll} is better than previous best {best_valid_performance}")
                 best_valid_performance = valid_ll
                 if early_stopping:
                     best_valid_weights = embedding.theta.numpy()
@@ -130,14 +134,14 @@ def map_estimate(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, ep
                     epoch_training_loss.append(objective() / len(i))
                     batch_no = len(epoch_training_loss)
                     if batch_no % 250 == 0:
-                        print(f"Epoch {epoch} mean training loss after {batch_no} batches: {np.mean(epoch_training_loss)}")
+                        logger.log(logging.TRAIN, f"Epoch {epoch} mean training loss after {batch_no} batches: {np.mean(epoch_training_loss)}")
 
     if early_stopping and valid_data is not None and best_valid_weights is not None:
-        print("Assign the weights corresponding to the best validation loss")
+        logger.info("Assign the weights corresponding to the best validation loss")
         embedding.theta.assign(best_valid_weights)
     return embedding
 
-def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, init_mean=True, init_std=0.05, evaluate=True, valid_data=None, elbo_history=False):
+def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, init_mean=True, init_std=0.05, evaluate=True, valid_data=None, elbo_history=False, loglevel="DEBUG"):
     """
     Perform mean-field variational inference.
     
@@ -158,6 +162,7 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
     Returns:
         A tuple consisting of the means as a pwe.Embedding and the standard deviations as an np.array
     """
+    logger = get_logger(loglevel, name="vi")
     if not isinstance(embedding, Embedding):
         warnings.warn("embedding is not a subclass of probabilistic_word_embeddings.Embedding")
     if model not in ["sgns", "cbow"]:
@@ -177,7 +182,7 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
     q_mean = tf.Variable(q_mean_init)
     if type(init_std) == float:
         init_std = tf.random.normal(e.theta.shape, dtype=tf.float64)* 0.00001 + tf.cast(tf.math.log(init_std), dtype=tf.float64)
-        print(init_std)
+        logger.info(f"Init std: {init_std}")
     q_std_log =  tf.Variable(init_std)
     
     opt_mean_var = optimizer.add_variable_from_reference(q_mean, "q_mean", initial_value=q_mean)
@@ -186,7 +191,7 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
 
     elbo_history = []
     for epoch in range(epochs):
-        print(f"Epoch {epoch}")
+        logger.log(logging.TRAIN, f"Epoch {epoch}")
         # Shuffle the order of batches
         if evaluate:
             similarity = evaluate_word_similarity(embedding)
@@ -224,7 +229,7 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
 
         epoch_entropy = tf.reduce_sum(opt_std_var)
         epoch_elbo = tf.reduce_mean(epoch_logprobs) + epoch_entropy
-        print(f"Epoch ELBO: {epoch_elbo.numpy()}")
+        logger.log(logging.TRAIN, f"Epoch ELBO: {epoch_elbo.numpy()}")
         embedding.theta.assign(opt_mean_var)
         elbo_history.append(epoch_elbo.numpy())
 
