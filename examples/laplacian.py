@@ -6,7 +6,7 @@ from probabilistic_word_embeddings.evaluation import embedding_similarities, eva
 from scipy.spatial.distance import cosine as cos_dist
 import tensorflow as tf
 
-text = open("wiki.txt").read().lower().split()
+text = open("examples/data/wikismall.txt").read().lower().split()
 text, vocabulary = preprocess_standard(text)
 print(f"Train on a text of length {len(text)} with a vocabulary size of {len(vocabulary)}")
 
