@@ -16,6 +16,6 @@ dim = 100
 e = LaplacianEmbedding(vocabulary, dim, g)
 # Perform MAP estimation
 
-e = map_estimate(e, text, model="cbow", ws=5, epochs=15)
+e = map_estimate(e, text, model="cbow", ws=5, epochs=5)
 similarity = evaluate_word_similarity(e)
 print(similarity)
