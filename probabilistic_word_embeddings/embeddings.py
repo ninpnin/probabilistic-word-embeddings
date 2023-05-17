@@ -149,6 +149,7 @@ class LaplacianEmbedding(Embedding):
             self.lambda0 = d["lambda0"]
             self.lambda1 = d["lambda1"]
             self.graph = d["graph"]
+            self.edges_i = None
 
     def log_prob(self, batch_size, data_size):
         """
