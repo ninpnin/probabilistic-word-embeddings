@@ -38,10 +38,10 @@ class Test(unittest.TestCase):
             e = copy.deepcopy(e_map)
             init_mean = False
             init_std = 0.2
-            q_mu, q_std_log, elbo_history = mean_field_vi(e, text, model="cbow", evaluate=False, ws=ws, batch_size=batch_size, init_mean=init_mean, init_std=init_std, epochs=epochs, elbo_history=True)
+            q_mu, q_std_e, elbo_history = mean_field_vi(e, text, model="cbow", evaluate=False, ws=ws, batch_size=batch_size, init_mean=init_mean, init_std=init_std, epochs=epochs, elbo_history=True)
 
             q_mean = q_mu.theta.numpy()
-            q_std = tf.exp(q_std_log).numpy()
+            q_std = q_std_e.theta.numpy()
 
             rounds = len(vocabulary) // batch_size
 
