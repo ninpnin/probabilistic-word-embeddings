@@ -15,6 +15,7 @@ from scipy.spatial.distance import cosine as cos_dist
 import random, warnings
 import sys
 import logging
+import copy
 
 def map_estimate(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, vocab_freqs=None, valid_data=None, early_stopping=False, profile=False, training_loss=True, loglevel="DEBUG"):
     """
@@ -189,7 +190,7 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
     opt_std_var = optimizer.add_variable_from_reference(q_std_log, "q_std_log", initial_value=q_std_log)
     optimizer.build([opt_mean_var, opt_std_var])
 
-    elbo_history = []
+    elbos = []
     for epoch in range(epochs):
         logger.log(logging.TRAIN, f"Epoch {epoch}")
         # Shuffle the order of batches
@@ -231,12 +232,14 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
         epoch_elbo = tf.reduce_mean(epoch_logprobs) + epoch_entropy
         logger.log(logging.TRAIN, f"Epoch ELBO: {epoch_elbo.numpy()}")
         embedding.theta.assign(opt_mean_var)
-        elbo_history.append(epoch_elbo.numpy())
+        elbos.append(epoch_elbo.numpy())
 
     embedding_q_mean = embedding
+    embedding_q_std = copy.deepcopy(embedding_q_mean)
+    embedding_q_std.theta.assign(tf.math.exp(q_std_log))
     if elbo_history:
-        return embedding_q_mean, q_std_log, elbo_history
-    return embedding_q_mean, q_std_log
+        return embedding_q_mean, embedding_q_std, elbos
+    return embedding_q_mean, embedding_q_std
 
 
 
