@@ -54,6 +54,9 @@ def downsample_common_words(data, counts, cutoff=0.00001, chunk_len=5000000, see
     N = sum(counts.values())
     counts_tf = dict_to_tf(counts)
         # Randomize and fetch by this probability
+    if seed is not None:
+        tf.random.set_seed(seed)
+        
     if len(data) < chunk_len:
         frequencies = counts_tf.lookup(data) / N
         # Discard probability based on relative frequency
