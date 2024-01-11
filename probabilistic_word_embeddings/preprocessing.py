@@ -33,7 +33,7 @@ def filter_rare_words(data, limit=5, keep_words=set()):
     counts = {wd: count for wd, count in counts.items() if count >= limit or wd in keep_words}
     return outdata, counts
 
-def downsample_common_words(data, counts, cutoff=0.00001, chunk_len=5000000):
+def downsample_common_words(data, counts, cutoff=0.00001, chunk_len=5000000, seed=None):
     """
     Discard words with the probability of 1 - sqrt(10^-5 / freq)
     Initially proposed by Mikolov et al. (2013)
@@ -79,7 +79,7 @@ def downsample_common_words(data, counts, cutoff=0.00001, chunk_len=5000000):
 
         return l
 
-def preprocess_standard(text, keep_words=set(), limit=5, downsample=True):
+def preprocess_standard(text, keep_words=set(), limit=5, downsample=True, seed=None):
     """
     Standard preprocessing: filter out rare (<=5 occurences) words, downsample common words.
 
@@ -95,13 +95,13 @@ def preprocess_standard(text, keep_words=set(), limit=5, downsample=True):
     N = len(text)
     text, counts = filter_rare_words(text, limit=limit, keep_words=keep_words)
     if downsample:
-        text = downsample_common_words(text, counts)
+        text = downsample_common_words(text, counts, seed=seed)
 
     vocabulary = set(text)
     freqs = {wd: counts[wd] / N for wd in list(vocabulary)}
     return text, freqs
 
-def preprocess_partitioned(texts, labels, keep_words=set(), limit=5, downsample=True):
+def preprocess_partitioned(texts, labels, keep_words=set(), limit=5, downsample=True, seed=None):
     """
     Standard preprocessing for partitioned datasets: filter out rare (<=5 occurences) words, downsample common words.
 
@@ -120,7 +120,7 @@ def preprocess_partitioned(texts, labels, keep_words=set(), limit=5, downsample=
     N = sum([len(t) for t in texts])
     texts, counts = filter_rare_words(texts, limit=limit, keep_words=keep_words)
     if downsample:
-        texts = [downsample_common_words(text, counts) for text in texts]
+        texts = [downsample_common_words(text, counts, seed=seed) for text in texts]
 
     def add_subscript(t, subscript):
         if not isinstance(t, tf.Tensor):
