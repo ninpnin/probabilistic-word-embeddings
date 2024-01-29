@@ -114,7 +114,12 @@ def preprocess_partitioned(texts, labels, keep_words=set()):
     def add_subscript(t, subscript):
         if not isinstance(t, tf.Tensor):
             t = tf.constant(t)
-        t = t + f"_{subscript}"
+        try:
+            t = t + f"_{subscript}"
+        except Exception as e:
+            print(f"Error encountered with t: {t}; subscript {subscript}")
+            raise e
+
         t = [wd.decode("utf-8") for wd in t.numpy()]
         return t
 
