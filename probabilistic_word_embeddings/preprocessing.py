@@ -131,7 +131,7 @@ def preprocess_partitioned(texts, labels=None, keep_words=set(), limit=5, downsa
         if len(t) == 0:
             warnings.warn(f"Empty text encountered {t}")
             return t
-        
+
         if not isinstance(t, tf.Tensor):
             t = tf.constant(t)
         try:
@@ -144,8 +144,8 @@ def preprocess_partitioned(texts, labels=None, keep_words=set(), limit=5, downsa
         return t
 
     if labels is not None:
-        texts = [add_subscript(text, label) for text, label in zip(texts, labels)]
-    vocabs = [set(text) for text in texts]
+        texts = [add_subscript(text, label) for text, label in progressbar.progressbar(zip(texts, labels))]
+    vocabs = [set(text) for text in progressbar.progressbar(texts)]
     empty = set()
     vocabulary = empty.union(*vocabs)
 
@@ -155,7 +155,10 @@ def preprocess_partitioned(texts, labels=None, keep_words=set(), limit=5, downsa
         n = len(s)
         return "_".join(s[:n-1])
 
-    unnormalized_freqs = {wd: counts[_remove_subscript(wd)] / N for wd in list(vocabulary)}
+    if labels is None:
+        unnormalized_freqs = {wd: counts[wd] / N for wd in list(vocabulary)}
+    else:
+        unnormalized_freqs = {wd: counts[_remove_subscript(wd)] / N for wd in list(vocabulary)}
     freqs_sum = sum(unnormalized_freqs.values())
     freqs = {wd: f / freqs_sum for wd, f in unnormalized_freqs.items()}
     return texts, freqs
