@@ -2,7 +2,25 @@ import numpy as np
 import tensorflow as tf
 import pickle
 import warnings
-    
+import logging, colorlog
+import sys
+logging.TRAIN = 25
+logging.addLevelName(logging.TRAIN, 'TRAIN')
+
+def get_logger(loglevel, name="log"):
+    handler = colorlog.StreamHandler(stream=sys.stdout)
+    LOG_COLORS = {'DEBUG':'cyan', 'INFO':'green', 'TRAIN':'blue', 'WARNING':'yellow', 'ERROR': 'red', 'CRITICAL':'red,bg_white'}
+    handler.setFormatter(colorlog.ColoredFormatter('%(log_color)s%(asctime)s [%(levelname)s] %(white)s(%(name)s)%(reset)s: %(message)s',
+        log_colors=LOG_COLORS,
+        datefmt="%H:%M:%S",
+        stream=sys.stdout))
+    logger = colorlog.getLogger(name)
+    logger.addHandler(handler)
+    logger.setLevel(loglevel)
+    logger.propagate = False
+
+    return logger
+
 # MAP estimation
 #@tf.function
 def shuffled_indices(data_len, batch_len):
@@ -21,39 +39,6 @@ def shuffled_indices(data_len, batch_len):
         array = tf.random.shuffle(array)
         return array
 
-# Sparse matrices
-def dict_to_sparse(tensor_dict, shape):
-    indices = []
-    values = []
-    
-    for index, value in tensor_dict.items():
-        ix1, ix2 = index
-        
-        index = [ix1, ix2]
-        indices.append(index)
-        values.append(value)
-        
-    tf.sparse.SparseTensor(indices=indices, values=values, dense_shape=shape, dtype=dtype)
-
-def scipy_to_tf_sparse(X, dtype=None):
-    coo = X.tocoo()
-    indices = np.mat([coo.row, coo.col]).transpose()
-    values = coo.data
-    if dtype is not None:
-        values = tf.constant(values, dtype=dtype)
-
-    return tf.SparseTensor(indices, values, coo.shape)
-
-def save_sparse(stensor, fpath):
-    tensor_f = open(fpath, "wb")
-    pickle.dump(stensor, tensor_f)
-    
-def load_sparse(fpath):
-    tensor_f = open(fpath, 'rb')
-    stensor = pickle.load(tensor_f)
-    tensor_f.close()
-    return stensor
-
 def dict_to_tf(d):
     keys = list(d.keys())
     values = list(d.values())
@@ -67,17 +52,6 @@ def dict_to_tf(d):
         name="class_weight"
     )
     return table
-
-# Combined function x : c(x) = b(a(x))
-def transitive_dict(a, b):
-    c = {}
-    
-    for key_a in a.keys():
-        key_b = a[key_a]
-        if key_b in b:
-            c[key_a] = b[key_b]
-        
-    return c
 
 def align(e_reference, e, words, words_reference=None):
     """
@@ -111,3 +85,33 @@ def align(e_reference, e, words, words_reference=None):
 
     return e
 
+def _normalize_word(wd):
+    context_vector = "_c" in wd
+    wd = wd.split("_")[0]
+
+    if context_vector:
+        wd = f"{wd}_c"
+
+    return wd
+
+def transfer_embeddings(e_source, e_target, ignore_group=False):
+    """
+    Transfer all embeddings for shared vocabulary from one embedding to another.
+    """
+    source_vocab = e_source.vocabulary
+    target_vocab = e_target.vocabulary
+    if not ignore_group:
+        vocab = {wd: ix for wd, ix in target_vocab.items() if wd in source_vocab}
+
+        # Make unique
+        vocab = {v: k for k, v in vocab.items()}
+        words = list(vocab.values())
+        e_target[words] = e_source[words]
+    else:
+        source_vocab_normalized = {_normalize_word(wd): wd for wd in source_vocab}
+        target_vocab = {wd: ix for wd, ix in target_vocab.items() if _normalize_word(wd) in source_vocab_normalized}
+        target_vocab = {v: k for k, v in target_vocab.items()}
+        target_words = list(target_vocab.values())
+        source_words = [source_vocab_normalized[_normalize_word(wd)] for wd in target_words]
+        e_target[target_words] = e_source[source_words]
+    return e_target

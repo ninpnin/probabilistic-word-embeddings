@@ -3,7 +3,7 @@ name: Perform unit tests
 on: [push]
 
 jobs:
-  build:
+  unittest:
 
     runs-on: ubuntu-latest
     strategy:
@@ -21,8 +21,32 @@ jobs:
         python -m pip install --upgrade pip
         pip install .
 
-    - name: Test with unittest
+    - name: Test embeddings
       run: |
-        python -m unittest tests.estimation
         python -m unittest tests.embeddings
+    - name: Test MAP estimation
+      run: |
+        python -m unittest tests.map
+    - name: Run examples
+      run: |
+        for f in examples/*.py; do python "$f"; done
+  vi:
 
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install .
+    - name: Test variational inference
+      run: |
+        python -m unittest tests.vi

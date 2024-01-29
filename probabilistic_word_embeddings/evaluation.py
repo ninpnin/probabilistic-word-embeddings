@@ -27,7 +27,7 @@ import warnings
 
 from .models import generate_sgns_batch, sgns_likelihood
 from .models import generate_cbow_batch, cbow_likelihood
-def evaluate_on_holdout_set(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, reduce_mean=True):
+def evaluate_on_holdout_set(embedding, data, model="sgns", ws=5, ns=5, batch_size=25000, metric="likelihood", reduce_mean=True):
     """
     Evaluate the performance of an embedding on a holdout set
     
@@ -43,6 +43,7 @@ def evaluate_on_holdout_set(embedding, data, model="sgns", ws=5, ns=5, batch_siz
     Returns:
         Validation performance as a tf.Tensor
     """
+    assert metric in ["likelihood", "accuracy"]
     if not isinstance(data, tf.Tensor):
         data = tf.constant(data)
     valid_batches = len(data) // batch_size
@@ -52,10 +53,20 @@ def evaluate_on_holdout_set(embedding, data, model="sgns", ws=5, ns=5, batch_siz
         start_ix = batch_size * batch
         if model == "sgns":
             i,j,x  = generate_sgns_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix)
-            valid_ll = tf.concat([valid_ll, sgns_likelihood(embedding, i, j, x=x)], axis=0)
+            valid_ll_batch = sgns_likelihood(embedding, i, j, x=x)
         elif model == "cbow":
             i,j,x  = generate_cbow_batch(data, ws=ws, ns=ns, batch=batch_size, start_ix=start_ix)
-            valid_ll = tf.concat([valid_ll, cbow_likelihood(embedding, i, j, x=x)], axis=0)
+            valid_ll_batch = cbow_likelihood(embedding, i, j, x=x)
+
+        if metric == "accuracy":
+            limit = tf.ones(valid_ll_batch.shape, dtype=valid_ll_batch.dtype) * tf.cast(tf.math.log(0.5), dtype=valid_ll_batch.dtype)
+            valid_ll_batch = tf.math.sign(valid_ll_batch - limit)
+            valid_ll_batch = valid_ll_batch / 2.0 + 0.5
+        # Reduce memory footprint by calculating the mean on the fly
+        if reduce_mean:
+            valid_ll_batch = tf.expand_dims(tf.reduce_mean(valid_ll_batch), 0)
+
+        valid_ll = tf.concat([valid_ll, valid_ll_batch], axis=0)
 
     if reduce_mean:
         return tf.reduce_mean(valid_ll)
@@ -122,22 +133,26 @@ def evaluate_word_similarity(embedding, dataset_names=None):
 
     return pd.DataFrame(rows, columns=["Dataset", "Rank Correlation", "No. of Observations", "p-value"])
 
-def nearest_neighbors(embedding, words, K=25):
+def nearest_neighbors(embedding, words, K=25, epsilon=1e-10):
     """
-    Evaluate embedding performance on word analogy tasks.
+    Get the K nearest neighbors using cosine distance
     
     Args:
         embedding: embedding as pwe.embeddings.Embedding
-        dataset (pd.DataFrame): Dataframe where each row has four words, word1 - word2 + word3 ≈ word4
+        words (list): List of words for which the nearest neighbors are fetched
+        K (int): the number of nearest neighbors per word
+        epsilon (float): the noise injected to the embedding to numerical issues. For most uses, the default value is ok.
     """
     e = copy.deepcopy(embedding)
+    noise = tf.random.normal(shape=e.theta.shape, dtype=tf.float64) * epsilon
+    e.theta.assign_add(noise)
     words = [wd for wd in words if wd in embedding]
     r = len(words)
     X = embedding[words]
 
     inv_vocab = {v: k for k, v in e.vocabulary.items()}
     eliminate = list(range(len(inv_vocab)))
-    eliminate = [0.0 if ("_c" in inv_vocab[i] or inv_vocab[i] in words) else 1.0 for i in eliminate]
+    eliminate = [-100.0 if ("_c" in inv_vocab[i] or inv_vocab[i] in words) else 0.0 for i in eliminate]
     eliminate = tf.transpose(tf.constant([eliminate], dtype=tf.float64))
 
     X, _ = tf.linalg.normalize(X, axis=1)
@@ -147,7 +162,7 @@ def nearest_neighbors(embedding, words, K=25):
 
     Ex = tf.linalg.tensordot(e.theta, X, axes=[1,1])
     tiled_eliminate = tf.tile(eliminate, [1,r])
-    Ex = tf.multiply(Ex, tiled_eliminate)
+    Ex = tf.add(Ex, tiled_eliminate)
 
     rows = []
 
@@ -220,7 +235,7 @@ def evaluate_analogy(embedding, dataset, K=25):
 
 def bli(pairs, e, precision=[1,5,15], reverse=False):
     """
-    Calculates the Bilingual Lexicon Induction performance of a crosslingual word embedding.
+    Calculate the Bilingual Lexicon Induction performance of a crosslingual word embedding.
     
     Args:
         pairs: list of word pairs
