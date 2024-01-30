@@ -17,20 +17,21 @@ import sys
 import logging
 import copy
 
-def map_estimate(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, vocab_freqs=None, valid_data=None, early_stopping=False, profile=False, training_loss=True, loglevel="DEBUG"):
+def map_estimate(embedding, data=None, ns_data=None, data_generator=None, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, valid_data=None, early_stopping=False, profile=False, training_loss=True, loglevel="DEBUG"):
     """
     Perform MAP estimation.
     
     Args:
         embedding: Embedding with a suitable vocabulary and log_prob function. Subclass of pwe.Embedding
         data: Data as a list of python strings.
+        data_generator: Data as a generator that yields (i, j, x) tuples, where i are the center words as tf.Tensor (str),
+            j are the context words as tf.Tensor (str), and x the Bernoulli outcomes as tf.Tensor (int)
         model (str): Word embedding model, either 'sgns' or 'cbow'.
         ws (int): SGNS or CBOW window size
         ns (int): SGNS or CBOW number of negative samples
         batch_size (int): Batch size in the training process 
         epochs (int): The number of passes over the data.
         evaluate (bool): Whether to run word similarity evaluation during training on the standard English evaluation data sets
-        vocab_freqs (dict): The frequencies of the word used for negative sampling. If not provided, the word frequencies are calculated from 'data'.
         valid_data: Data as a list of python strings.
         early_stopping (bool): Wheter to only save the best model according to the validation loss. Requires valid_data.
         profile (bool): whether to run the tensorflow profiler during training
@@ -45,54 +46,28 @@ def map_estimate(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, ep
         warnings.warn("embedding is not a subclass of probabilistic_word_embeddings.Embedding")
     if model not in ["sgns", "cbow"]:
         raise ValueError("model must be 'sgns' or 'cbow'")
+    if (data is None) == (data_generator is None):
+        raise ValueError("Provide either 'data' or 'data_generator'")
     if profile:
         tf.profiler.experimental.start("logs")
 
-    datasets = data
-    if not isinstance(data[0], list):
-        datasets = [data]
-
-    datasets = [tf.constant(data) for data in datasets]
+    if data is not None:
+        if not isinstance(data, tf.Tensor):
+            data = tf.constant(data)
+            N = len(data)
+            batches = N // batch_size
+    
+    if ns_data is None:
+        ns_data = data
 
     opt = tf.keras.optimizers.Adam(learning_rate=0.001)
     e = embedding
-    Ns = [len(data) for data in datasets]
-    batches = [N // batch_size for N in Ns]
     if valid_data is not None:
         if not isinstance(valid_data, tf.Tensor):
             valid_data = tf.constant(valid_data)
         valid_batches = len(valid_data) // batch_size
         best_valid_performance = None
         best_valid_weights = None
-
-    if vocab_freqs is None:
-        ns_data_list = [data for data in datasets]
-    else:
-        ns_data_list = []
-        vocab_freqs_list = vocab_freqs
-        if type(vocab_freqs) is dict:
-            vocab_freqs_list = [vocab_freqs]
-        for N, vocab_freqs, data in zip(Ns, vocab_freqs_list, datasets):
-            vocab = [wd for wd in vocab_freqs]
-            freqs = [vocab_freqs[wd] for wd in vocab]
-            vocab = tf.constant(vocab)
-            logits = 3/4 * tf.math.log(tf.constant([freqs]))
-            logger.debug("Randomize negative sample dataset...")
-            ns_batch_size = (500 * 1000 * 1000) // len(vocab)
-            ns_batches = N // ns_batch_size
-            ns_data = []
-            for batch in progressbar.progressbar(range(ns_batches)):
-                ns_i = tf.random.categorical(logits, ns_batch_size)
-                ns_data_batch = tf.gather(vocab, ns_i)
-                ns_data_batch = tf.reshape(ns_data_batch, [ns_batch_size])
-                ns_data.append(ns_data_batch)
-
-            ns_data.append(data[ns_batches * ns_batch_size:])
-            ns_data = tf.concat(ns_data, axis=0)
-        ns_data_list.append(ns_data)
-
-        for ns_data, data in zip(ns_data_list, datasets):
-            assert len(ns_data) == len(data), f"{len(ns_data)} vs {len(data)}"
 
     for epoch in range(epochs):
         logger.log(logging.TRAIN, f"Epoch {epoch}")
@@ -118,24 +93,23 @@ def map_estimate(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, ep
 
         # Shuffle the order of batches
         epoch_training_loss = []
-        batches_max = max(batches)
-        randomized_batches = [[random.sample(range(batches_i), 1)[0] for batches_i in batches] for _ in range(batches_max)]
-        for batch_list in progressbar.progressbar(randomized_batches, redirect_stdout=True):
-            start_indices = [batch_size * batch for batch in batch_list]
-
-            for dataset_ix in range(len(datasets)):
-                start_ix, data, ns_data, N = start_indices[dataset_ix], datasets[dataset_ix], ns_data_list[dataset_ix], Ns[dataset_ix]
+        randomized_batches = random.sample(range(batches),batches)
+        for batch in progressbar.progressbar(randomized_batches, redirect_stdout=True):
+            start_ix = batch_size * batch
+            if data is None:
+                i,j,x = next(data_generator)
+            else:
                 i,j,x  = generate_batch(data, model=model, ws=ws, ns=ns, batch_size=batch_size, start_ix=start_ix, ns_data=ns_data)
-                if model == "sgns":
-                    objective = lambda: - tf.reduce_sum(sgns_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
-                elif model == "cbow":
-                    objective = lambda: - tf.reduce_sum(cbow_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
-                _ = opt.minimize(objective, [embedding.theta])
-                if training_loss:
-                    epoch_training_loss.append(objective() / len(i))
-                    batch_no = len(epoch_training_loss)
-                    if batch_no % 250 == 0:
-                        logger.log(logging.TRAIN, f"Epoch {epoch} mean training loss after {batch_no} batches: {np.mean(epoch_training_loss)}")
+            if model == "sgns":
+                objective = lambda: - tf.reduce_sum(sgns_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
+            elif model == "cbow":
+                objective = lambda: - tf.reduce_sum(cbow_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
+            _ = opt.minimize(objective, [embedding.theta])
+            if training_loss:
+                epoch_training_loss.append(objective() / len(i))
+                batch_no = len(epoch_training_loss)
+                if batch_no % 250 == 0:
+                    logger.log(logging.TRAIN, f"Epoch {epoch} mean training loss after {batch_no} batches: {np.mean(epoch_training_loss)}")
 
     if early_stopping and valid_data is not None and best_valid_weights is not None:
         logger.info("Assign the weights corresponding to the best validation loss")

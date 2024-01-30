@@ -199,6 +199,9 @@ class Test(unittest.TestCase):
                 texts.append(t)
 
         texts, vocabulary = preprocess_partitioned(texts, names)
+        text = []
+        for t in texts:
+            text += t
 
         vocab_size = len(vocabulary)
         batch_size = 250
@@ -206,7 +209,7 @@ class Test(unittest.TestCase):
         
         e = Embedding(vocabulary=vocabulary, dimensionality=dim, shared_context_vectors=False)
         theta_before = e.theta.numpy()
-        e = map_estimate(e, texts, evaluate=False, batch_size=batch_size, epochs=1)
+        e = map_estimate(e, text, evaluate=False, batch_size=batch_size, epochs=1)
         theta = e.theta.numpy()
         self.assertNotEqual(tf.reduce_sum(theta-theta_before), 0.0)
         self.assertEqual(type(theta), np.ndarray)
