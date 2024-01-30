@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 from .utils import dict_to_tf
 import progressbar
+import warnings
 
 def filter_rare_words(data, limit=5, keep_words=set()):
     """
@@ -104,7 +105,7 @@ def preprocess_standard(text, keep_words=set(), limit=5, downsample=True, seed=N
     freqs = {wd: counts[wd] / N for wd in list(vocabulary)}
     return text, freqs
 
-def preprocess_partitioned(texts, labels, keep_words=set(), limit=5, downsample=True, seed=None):
+def preprocess_partitioned(texts, labels=None, keep_words=set(), limit=5, downsample=True, seed=None):
     """
     Standard preprocessing for partitioned datasets: filter out rare (<=5 occurences) words, downsample common words.
 
@@ -118,7 +119,8 @@ def preprocess_partitioned(texts, labels, keep_words=set(), limit=5, downsample=
     Returns:
         text, vocabulary: text as a list of list of strs, vocabulary as a set of strs
     """
-    assert len(texts) == len(labels), "Number of data partitions and labels must be equal"
+    if labels is not None:
+        assert len(texts) == len(labels), "Number of data partitions and labels must be equal"
     assert isinstance(texts[0], list), "Data should be provided as a list of lists"
     N = sum([len(t) for t in texts])
     texts, counts = filter_rare_words(texts, limit=limit, keep_words=keep_words)
@@ -126,6 +128,10 @@ def preprocess_partitioned(texts, labels, keep_words=set(), limit=5, downsample=
         texts = [downsample_common_words(text, counts, seed=seed) for text in texts]
 
     def add_subscript(t, subscript):
+        if len(t) == 0:
+            warnings.warn(f"Empty text encountered {t}")
+            return t
+
         if not isinstance(t, tf.Tensor):
             t = tf.constant(t)
         try:
@@ -137,8 +143,9 @@ def preprocess_partitioned(texts, labels, keep_words=set(), limit=5, downsample=
         t = [wd.decode("utf-8") for wd in t.numpy()]
         return t
 
-    texts = [add_subscript(text, label) for text, label in zip(texts, labels)]
-    vocabs = [set(text) for text in texts]
+    if labels is not None:
+        texts = [add_subscript(text, label) for text, label in progressbar.progressbar(zip(texts, labels))]
+    vocabs = [set(text) for text in progressbar.progressbar(texts)]
     empty = set()
     vocabulary = empty.union(*vocabs)
 
@@ -148,7 +155,10 @@ def preprocess_partitioned(texts, labels, keep_words=set(), limit=5, downsample=
         n = len(s)
         return "_".join(s[:n-1])
 
-    unnormalized_freqs = {wd: counts[_remove_subscript(wd)] / N for wd in list(vocabulary)}
+    if labels is None:
+        unnormalized_freqs = {wd: counts[wd] / N for wd in list(vocabulary)}
+    else:
+        unnormalized_freqs = {wd: counts[_remove_subscript(wd)] / N for wd in list(vocabulary)}
     freqs_sum = sum(unnormalized_freqs.values())
     freqs = {wd: f / freqs_sum for wd, f in unnormalized_freqs.items()}
     return texts, freqs

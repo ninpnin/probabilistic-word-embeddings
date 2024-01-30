@@ -98,7 +98,7 @@ class Test(unittest.TestCase):
         embeddings = e[words]
         self.assertEqual(embeddings.shape, (K, dim))
 
-    def test_map_with_freqs(self):
+    def test_map_with_generator(self):
         """
         Test MAP estimation with example dataset
         """
@@ -109,8 +109,21 @@ class Test(unittest.TestCase):
         vocab_size = len(vocabulary)
         batch_size = 250
         dim = 25
+        N = len(text)
         e = Embedding(vocabulary=vocabulary, dimensionality=dim)
-        e = map_estimate(e, text, evaluate=False, epochs=1, batch_size=batch_size, vocab_freqs=vocabulary)
+
+        def data_generator():
+            while True:
+                i = np.random.choice(text, batch_size)
+                j = np.random.choice(text, batch_size)
+                x = np.random.binomial(1, 0.25, size=batch_size)
+
+                i = tf.constant(i)
+                j = tf.constant(j)
+                x = tf.constant(x, dtype=tf.float64)
+                yield (i,j,x)
+
+        e = map_estimate(e, data_generator=data_generator(), N=N, evaluate=False, model="sgns", epochs=1, batch_size=batch_size)
         theta = e.theta.numpy()
 
         self.assertEqual(type(theta), np.ndarray)
@@ -199,6 +212,9 @@ class Test(unittest.TestCase):
                 texts.append(t)
 
         texts, vocabulary = preprocess_partitioned(texts, names)
+        text = []
+        for t in texts:
+            text += t
 
         vocab_size = len(vocabulary)
         batch_size = 250
@@ -206,7 +222,7 @@ class Test(unittest.TestCase):
         
         e = Embedding(vocabulary=vocabulary, dimensionality=dim, shared_context_vectors=False)
         theta_before = e.theta.numpy()
-        e = map_estimate(e, texts, evaluate=False, batch_size=batch_size, epochs=1)
+        e = map_estimate(e, text, evaluate=False, batch_size=batch_size, epochs=1)
         theta = e.theta.numpy()
         self.assertNotEqual(tf.reduce_sum(theta-theta_before), 0.0)
         self.assertEqual(type(theta), np.ndarray)
