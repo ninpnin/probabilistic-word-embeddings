@@ -28,6 +28,12 @@ jobs:
       run: |
         PYTHONPATH="$PYTHONPATH:." python tests/release.py -v ${{ github.ref }}
         cat README.md
+    - name: Generate pdoc docs
+      run: |
+        TODAYS_DATE="$(date '+%Y-%m-%d')"
+        pdoc -d google probabilistic_word_embeddings/ -o docs --footer-text "Documentation generated on: $TODAYS_DATE Version: $VERSION_NUMBER"
+      env:
+        VERSION_NUMBER: ${{ github.ref }}
     - name: Commit files
       run: |
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
