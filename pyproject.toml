@@ -1,9 +1,11 @@
 [tool.poetry]
 name = "probabilistic-word-embeddings"
-version = "1.8.2"
+version = "1.8.3"
 description = "Probabilistic Word Embeddings for Python"
 authors = ["Your Name <you@example.com>"]
 license = "MIT"
+readme = "README.md"
+documentation = "https://ninpnin.github.io/probabilistic-word-embeddings/"
 
 [tool.poetry.dependencies]
 python = "^3.7"
