@@ -123,8 +123,10 @@ class Test(unittest.TestCase):
                 x = tf.constant(x, dtype=tf.float64)
                 yield (i,j,x)
 
-        e = map_estimate(e, data_generator=data_generator(), N=N, evaluate=False, model="sgns", epochs=1, batch_size=batch_size)
+        theta_orig = e.theta.numpy()
+        e = map_estimate(e, data_generator=data_generator(), N=N, evaluate=False, model="sgns", epochs=10, batch_size=batch_size)
         theta = e.theta.numpy()
+        self.assertNotEqual(theta_orig[0,0], theta[0,0])
 
         self.assertEqual(type(theta), np.ndarray)
 
