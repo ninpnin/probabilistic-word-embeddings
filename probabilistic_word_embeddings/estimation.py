@@ -17,7 +17,7 @@ import sys
 import logging
 import copy
 
-def map_estimate(embedding, data=None, ns_data=None, data_generator=None, N=None, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, valid_data=None, early_stopping=False, profile=False, training_loss=True, loglevel="DEBUG"):
+def map_estimate(embedding, data=None, ns_data=None, data_generator=None, N=None, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=False, valid_data=None, early_stopping=False, profile=False, training_loss=True, loglevel="DEBUG"):
     """
     Perform MAP estimation.
     
