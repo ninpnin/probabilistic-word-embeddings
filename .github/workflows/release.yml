@@ -10,13 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
 
     steps:
     - uses: actions/checkout@v2
       with:
         persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal access token.
-        fetch-depth: 0 # otherwise, there would be errors pushing refs to the destination repository.    - name: Set up Python ${{ matrix.python-version }}
+        fetch-depth: 0 # otherwise, there would be errors pushing refs to the destination repository.
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
@@ -24,16 +24,22 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install .
+        pip install pdoc
     - name: Change version number on README
       run: |
         PYTHONPATH="$PYTHONPATH:." python tests/release.py -v ${{ github.ref }}
         cat README.md
+    - name: Generate pdoc docs
+      run: |
+        pdoc -d google probabilistic_word_embeddings/ -o docs
     - name: Commit files
       run: |
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
         git add README.md
-        git commit -m "Add changes"
+        git add docs
+        git commit -m "docs: update README and docs"
     - name: Push changes
       uses: ad-m/github-push-action@master
       with:
