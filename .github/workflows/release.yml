@@ -32,7 +32,11 @@ jobs:
         cat README.md
     - name: Generate pdoc docs
       run: |
-        pdoc -d google probabilistic_word_embeddings/ -o docs
+        TODAYS_DATE="$(date '+%Y-%m-%d')"
+        footer_text="Documentation generated on: $TODAYS_DATE Version: $VERSION_NUMBER"
+        pdoc --footer-text $footer_text -d google probabilistic_word_embeddings/ -o docs
+      env:
+        VERSION_NUMBER: ${{ github.ref }}
     - name: Commit files
       run: |
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
