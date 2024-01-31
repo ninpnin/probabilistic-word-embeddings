@@ -25,17 +25,19 @@ def map_estimate(embedding, data=None, ns_data=None, data_generator=None, N=None
         embedding: Embedding with a suitable vocabulary and log_prob function. Subclass of pwe.Embedding
         data: Data as a list of python strings.
         data_generator: Data as a generator that yields (i, j, x) tuples, where i are the center words as tf.Tensor (str),
-            j are the context words as tf.Tensor (str), and x the Bernoulli outcomes as tf.Tensor (int)
+            j are the context words as tf.Tensor (str), and x the Bernoulli outcomes as tf.Tensor (int). Alternative to 'data'.
+        N (int): number of observations. Only necessary when using 'data_generator'.
         model (str): Word embedding model, either 'sgns' or 'cbow'.
-        ws (int): SGNS or CBOW window size
-        ns (int): SGNS or CBOW number of negative samples
+        ws (int): SGNS or CBOW window size. Only necessary when using 'data'.
+        ns (int): SGNS or CBOW number of negative samples. Only necessary when using 'data'.
         batch_size (int): Batch size in the training process 
         epochs (int): The number of passes over the data.
         evaluate (bool): Whether to run word similarity evaluation during training on the standard English evaluation data sets
         valid_data: Data as a list of python strings.
-        early_stopping (bool): Wheter to only save the best model according to the validation loss. Requires valid_data.
+        early_stopping (bool): Wheter to only save the best model according to the validation loss. Requires 'valid_data'.
         profile (bool): whether to run the tensorflow profiler during training
         training_loss (bool): whether to print out the training loss during training.
+        loglevel (bool): log level for the training script
     
     Returns:
         Trained embedding
@@ -48,6 +50,10 @@ def map_estimate(embedding, data=None, ns_data=None, data_generator=None, N=None
         raise ValueError("model must be 'sgns' or 'cbow'")
     if (data is None) == (data_generator is None):
         raise ValueError("Provide either 'data' or 'data_generator'")
+    if (data is None) and (N is None):
+        raise ValueError("Provide 'N' when using 'data_generator'")
+    if (data is None) and ((ws is not None) or (ns is not None)):
+        warnings.warn("The arguments 'ws' and 'ns' are ignored when using 'data_generator'")
     if profile:
         tf.profiler.experimental.start("logs")
 
