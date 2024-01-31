@@ -34,7 +34,7 @@ jobs:
       run: |
         TODAYS_DATE="$(date '+%Y-%m-%d')"
         footer_text="Documentation generated on: $TODAYS_DATE Version: $VERSION_NUMBER"
-        pdoc -d google probabilistic_word_embeddings/ -o docs
+        pdoc --footer-text $footer_text -d google probabilistic_word_embeddings/ -o docs
       env:
         VERSION_NUMBER: ${{ github.ref }}
     - name: Commit files
