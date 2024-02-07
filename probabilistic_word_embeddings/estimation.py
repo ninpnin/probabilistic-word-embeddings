@@ -123,23 +123,31 @@ def map_estimate(embedding, data=None, ns_data=None, data_generator=None, N=None
         embedding.theta.assign(best_valid_weights)
     return embedding
 
-def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, init_mean=True, init_std=0.05, evaluate=True, valid_data=None, elbo_history=False, loglevel="DEBUG"):
+def mean_field_vi(embedding, data=None, data_generator=None, N=None, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, init_mean=True, init_std=0.05, evaluate=True, valid_data=None, elbo_history=False, loglevel="DEBUG"):
     """
     Perform mean-field variational inference.
     
     Args:
         embedding: Embedding with a suitable vocabulary and log_prob function. Subclass of pwe.Embedding
         data: Data as a list of python strings.
+
+            data_generator:
+            N:
+
         model (str): Word embedding model, either 'sgns' or 'cbow'.
         ws (int): SGNS or CBOW window size
         ns (int): SGNS or CBOW number of negative samples
         batch_size (int): Batch size in the training process 
         epochs (int): The number of passes over the data.
+
+
         init_mean (bool): Randomize the initial values of the embedding. If False, uses the values provided in the 'embedding' argument.
         init_std (float / np.array / tf.Tensor): Default value for the standard deviations. Can be a scalar (float) or an array (np.array / tf.Tensor)
         evaluate (bool): Whether to run word similarity evaluation during training on the standard English evaluation data sets
         valid_data: Data as a list of python strings.
         elbo_history (bool): Whether to return the ELBO history as a list
+
+            training_loss
     
     Returns:
         A tuple consisting of the means as a pwe.Embedding and the standard deviations as an np.array
@@ -150,12 +158,14 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
     if model not in ["sgns", "cbow"]:
         raise ValueError("model must be 'sgns' or 'cbow'")
 
-    if not isinstance(data, tf.Tensor):
-        data = tf.constant(data)
-
     optimizer = tf.keras.optimizers.experimental.Adam(learning_rate=0.001)
     e = embedding
-    N = len(data)
+
+    if data is not None:
+        if not isinstance(data, tf.Tensor):
+            data = tf.constant(data)
+            N = len(data)
+
     batches = N // batch_size
     
     q_mean_init = embedding.theta
@@ -186,8 +196,11 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
             z = q_mean + tf.multiply(tf.math.exp(q_std_log), epsilon)
             embedding.theta.assign(z)
             
-            start_ix = batch_size * batch
-            i,j,x  = generate_batch(data, model=model, ws=ws, ns=ns, batch_size=batch_size, start_ix=start_ix)
+            if data is None:
+                i,j,x = next(data_generator)
+            else:
+                start_ix = batch_size * batch
+                i,j,x  = generate_batch(data, model=model, ws=ws, ns=ns, batch_size=batch_size, start_ix=start_ix)
 
             with tf.GradientTape() as tape:
                 if model == "cbow":
