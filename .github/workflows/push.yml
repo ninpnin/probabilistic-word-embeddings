@@ -64,6 +64,9 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install .
-    - name: Test variational inference
+    - name: Test variational inference functionality
       run: |
         python -m unittest tests.vi
+    - name: Test variational inference accuracy
+      run: |
+        python -m unittest tests.vi_accuracy
