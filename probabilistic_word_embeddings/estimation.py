@@ -159,7 +159,7 @@ def mean_field_vi(embedding, data=None, data_generator=None, N=None, model="cbow
     if data is not None:
         if not isinstance(data, tf.Tensor):
             data = tf.constant(data)
-            N = len(data)
+        N = len(data)
 
     batches = N // batch_size
     
