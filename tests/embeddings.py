@@ -365,8 +365,16 @@ class EmbeddingTest(unittest.TestCase):
         max_diff = tf.reduce_max(tf.abs(e1[vocab_list] - e2[vocab_list])).numpy()
         self.assertAlmostEqual(max_diff, 0.0)
 
-        e1 = LaplacianEmbedding(vocabulary=vocabulary1, dimensionality=dim, seed=seed)
-        e2 = LaplacianEmbedding(vocabulary=vocabulary1, dimensionality=dim, seed=seed)
+        e1 = Embedding(vocabulary=vocabulary1, dimensionality=dim)
+        e2 = Embedding(vocabulary=vocabulary1, dimensionality=dim)
+
+        max_diff = tf.reduce_max(tf.abs(e1[vocab_list] - e2[vocab_list])).numpy()
+        self.assertGreater(max_diff, 0.01)
+
+        graph = nx.Graph()
+        graph.add_edge("moi", "mitä")
+        e1 = LaplacianEmbedding(vocabulary=vocabulary1, dimensionality=dim, graph=graph, seed=seed)
+        e2 = LaplacianEmbedding(vocabulary=vocabulary1, dimensionality=dim, graph=graph, seed=seed)
 
         max_diff = tf.reduce_max(tf.abs(e1[vocab_list] - e2[vocab_list])).numpy()
         self.assertAlmostEqual(max_diff, 0.0)
