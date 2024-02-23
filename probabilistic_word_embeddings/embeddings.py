@@ -13,7 +13,7 @@ class Embedding:
     '''
     Generic class for probabilistic embeddings.
     '''
-    def __init__(self, vocabulary=None, dimensionality=100, lambda0=1.0, shared_context_vectors=True, saved_model_path=None):
+    def __init__(self, vocabulary=None, dimensionality=100, lambda0=1.0, shared_context_vectors=True, saved_model_path=None, seed=None):
         if saved_model_path is None:
             if isinstance(vocabulary, dict):
                 vocabulary = set(vocabulary.keys())
@@ -32,7 +32,9 @@ class Embedding:
                 assert max(self.vocabulary.values()) + 1 == len(set(context_dict.values())) + len(keys)
             unique_parameters = len(set(self.vocabulary.values()))
             self.tf_vocabulary = dict_to_tf(self.vocabulary)
-            self.theta = tf.Variable((np.random.rand(unique_parameters, dimensionality)- 0.5)/dimensionality, dtype=tf.float64)
+
+            rng = np.random.default_rng(seed=seed)
+            self.theta = tf.Variable((rng.random(size=(unique_parameters, dimensionality))- 0.5)/dimensionality, dtype=tf.float64 )
             self.lambda0 = lambda0
         else:
             if type(saved_model_path) != str:
