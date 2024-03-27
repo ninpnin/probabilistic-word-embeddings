@@ -17,7 +17,7 @@ import sys
 import logging
 import copy
 
-def map_estimate(embedding, data=None, ns_data=None, data_generator=None, N=None, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=True, valid_data=None, early_stopping=False, profile=False, training_loss=True, loglevel="DEBUG"):
+def map_estimate(embedding, data=None, ns_data=None, data_generator=None, N=None, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, evaluate=False, valid_data=None, early_stopping=False, profile=False, training_loss=True, loglevel="DEBUG"):
     """
     Perform MAP estimation.
     
@@ -25,17 +25,19 @@ def map_estimate(embedding, data=None, ns_data=None, data_generator=None, N=None
         embedding: Embedding with a suitable vocabulary and log_prob function. Subclass of pwe.Embedding
         data: Data as a list of python strings.
         data_generator: Data as a generator that yields (i, j, x) tuples, where i are the center words as tf.Tensor (str),
-            j are the context words as tf.Tensor (str), and x the Bernoulli outcomes as tf.Tensor (int)
+            j are the context words as tf.Tensor (str), and x the Bernoulli outcomes as tf.Tensor (int). Alternative to 'data'.
+        N (int): number of observations. Only necessary when using 'data_generator'.
         model (str): Word embedding model, either 'sgns' or 'cbow'.
-        ws (int): SGNS or CBOW window size
-        ns (int): SGNS or CBOW number of negative samples
+        ws (int): SGNS or CBOW window size. Only necessary when using 'data'.
+        ns (int): SGNS or CBOW number of negative samples. Only necessary when using 'data'.
         batch_size (int): Batch size in the training process 
         epochs (int): The number of passes over the data.
         evaluate (bool): Whether to run word similarity evaluation during training on the standard English evaluation data sets
         valid_data: Data as a list of python strings.
-        early_stopping (bool): Wheter to only save the best model according to the validation loss. Requires valid_data.
+        early_stopping (bool): Wheter to only save the best model according to the validation loss. Requires 'valid_data'.
         profile (bool): whether to run the tensorflow profiler during training
         training_loss (bool): whether to print out the training loss during training.
+        loglevel (bool): log level for the training script
     
     Returns:
         Trained embedding
@@ -48,6 +50,10 @@ def map_estimate(embedding, data=None, ns_data=None, data_generator=None, N=None
         raise ValueError("model must be 'sgns' or 'cbow'")
     if (data is None) == (data_generator is None):
         raise ValueError("Provide either 'data' or 'data_generator'")
+    if (data is None) and (N is None):
+        raise ValueError("Provide 'N' when using 'data_generator'")
+    if (data is None) and ((ws is not None) or (ns is not None)):
+        warnings.warn("The arguments 'ws' and 'ns' are ignored when using 'data_generator'")
     if profile:
         tf.profiler.experimental.start("logs")
 
@@ -117,13 +123,16 @@ def map_estimate(embedding, data=None, ns_data=None, data_generator=None, N=None
         embedding.theta.assign(best_valid_weights)
     return embedding
 
-def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, init_mean=True, init_std=0.05, evaluate=True, valid_data=None, elbo_history=False, loglevel="DEBUG"):
+def mean_field_vi(embedding, data=None, data_generator=None, N=None, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, init_mean=True, init_std=0.05, evaluate=True, valid_data=None, elbo_history=False,    loglevel="DEBUG"):
     """
     Perform mean-field variational inference.
     
     Args:
         embedding: Embedding with a suitable vocabulary and log_prob function. Subclass of pwe.Embedding
         data: Data as a list of python strings.
+        data_generator: Data as a generator that yields (i, j, x) tuples, where i are the center words as tf.Tensor (str),
+            j are the context words as tf.Tensor (str), and x the Bernoulli outcomes as tf.Tensor (int). Alternative to 'data'.
+        N (int): number of observations. Only necessary when using 'data_generator'.
         model (str): Word embedding model, either 'sgns' or 'cbow'.
         ws (int): SGNS or CBOW window size
         ns (int): SGNS or CBOW number of negative samples
@@ -134,7 +143,7 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
         evaluate (bool): Whether to run word similarity evaluation during training on the standard English evaluation data sets
         valid_data: Data as a list of python strings.
         elbo_history (bool): Whether to return the ELBO history as a list
-    
+
     Returns:
         A tuple consisting of the means as a pwe.Embedding and the standard deviations as an np.array
     """
@@ -144,12 +153,14 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
     if model not in ["sgns", "cbow"]:
         raise ValueError("model must be 'sgns' or 'cbow'")
 
-    if not isinstance(data, tf.Tensor):
-        data = tf.constant(data)
-
     optimizer = tf.keras.optimizers.experimental.Adam(learning_rate=0.001)
     e = embedding
-    N = len(data)
+
+    if data is not None:
+        if not isinstance(data, tf.Tensor):
+            data = tf.constant(data)
+        N = len(data)
+
     batches = N // batch_size
     
     q_mean_init = embedding.theta
@@ -180,8 +191,11 @@ def mean_field_vi(embedding, data, model="cbow", ws=5, ns=5, batch_size=25000, e
             z = q_mean + tf.multiply(tf.math.exp(q_std_log), epsilon)
             embedding.theta.assign(z)
             
-            start_ix = batch_size * batch
-            i,j,x  = generate_batch(data, model=model, ws=ws, ns=ns, batch_size=batch_size, start_ix=start_ix)
+            if data is None:
+                i,j,x = next(data_generator)
+            else:
+                start_ix = batch_size * batch
+                i,j,x  = generate_batch(data, model=model, ws=ws, ns=ns, batch_size=batch_size, start_ix=start_ix)
 
             with tf.GradientTape() as tape:
                 if model == "cbow":

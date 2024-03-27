@@ -1,4 +1,4 @@
-name: Generate plot
+name: Bump version number and update docs
 
 on:
   release:
