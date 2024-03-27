@@ -16,6 +16,7 @@ networkx = "*"
 pandas = "*"
 scikit-learn = "*"
 colorlog = "*"
+tf-keras = "*"
 
 [tool.poetry.dev-dependencies]
 
