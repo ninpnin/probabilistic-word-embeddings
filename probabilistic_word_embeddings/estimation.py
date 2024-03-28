@@ -123,7 +123,8 @@ def map_estimate(embedding, data=None, ns_data=None, data_generator=None, N=None
         embedding.theta.assign(best_valid_weights)
     return embedding
 
-def mean_field_vi(embedding, data=None, data_generator=None, N=None, model="cbow", ws=5, ns=5, batch_size=25000, epochs=5, init_mean=True, init_std=0.05, evaluate=True, valid_data=None, elbo_history=False,    loglevel="DEBUG"):
+def mean_field_vi(embedding, data=None, data_generator=None, N=None, model="cbow", ws=5, ns=5, batch_size=25000,
+                   epochs=5, init_mean=True, init_std=0.05, evaluate=True, valid_data=None, elbo_history=False, words_to_fix_rotation=None, loglevel="DEBUG"):
     """
     Perform mean-field variational inference.
     
@@ -143,6 +144,7 @@ def mean_field_vi(embedding, data=None, data_generator=None, N=None, model="cbow
         evaluate (bool): Whether to run word similarity evaluation during training on the standard English evaluation data sets
         valid_data: Data as a list of python strings.
         elbo_history (bool): Whether to return the ELBO history as a list
+        words_to_fix_rotation (array): Words for which to fix rotation of. First word gets 1 dimension and last word gets d-1 dimensions.
 
     Returns:
         A tuple consisting of the means as a pwe.Embedding and the standard deviations as an np.array
@@ -155,6 +157,9 @@ def mean_field_vi(embedding, data=None, data_generator=None, N=None, model="cbow
 
     optimizer = tf.keras.optimizers.experimental.Adam(learning_rate=0.001)
     e = embedding
+
+    if words_to_fix_rotation:
+        assert len(words_to_fix_rotation) == e.dimensionality-1, f"Need to have embedding.dimensionality-1 number of words to fix. embedding.dimensionality = {e.dimensionality}"
 
     if data is not None:
         if not isinstance(data, tf.Tensor):
@@ -214,6 +219,17 @@ def mean_field_vi(embedding, data=None, data_generator=None, N=None, model="cbow
             optimizer.update_step(d_l_d_q_mean, opt_mean_var)
             optimizer.update_step(d_l_q_std_log, opt_std_var)
             
+            if words_to_fix_rotation: 
+                mask = np.ones_like(q_mean.numpy())  
+                for idx, word in enumerate(words_to_fix_rotation):
+                    word_index = e.vocabulary[word]
+                    mask[word_index, idx+1:] = 0
+                mask = tf.constant(mask, dtype=tf.float64)
+
+                opt_mean_var.assign(tf.multiply(opt_mean_var, mask))
+                opt_std_var.assign(tf.multiply(opt_std_var, mask))
+
+
             q_mean.assign(opt_mean_var)
             q_std_log.assign(opt_std_var)
 
@@ -229,7 +245,6 @@ def mean_field_vi(embedding, data=None, data_generator=None, N=None, model="cbow
     if elbo_history:
         return embedding_q_mean, embedding_q_std, elbos
     return embedding_q_mean, embedding_q_std
-
 
 
 
