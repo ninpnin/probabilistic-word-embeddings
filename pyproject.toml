@@ -9,7 +9,7 @@ documentation = "https://ninpnin.github.io/probabilistic-word-embeddings/"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-tensorflow = "<= 2.15"
+tensorflow = "<= 2.15.1"
 tensorflow-probability = "*"
 progressbar2 = "*"
 networkx = "*"
