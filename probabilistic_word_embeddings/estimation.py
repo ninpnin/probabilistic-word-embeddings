@@ -219,6 +219,8 @@ def mean_field_vi(embedding, data=None, data_generator=None, N=None, model="cbow
             optimizer.update_step(d_l_d_q_mean, opt_mean_var)
             optimizer.update_step(d_l_q_std_log, opt_std_var)
             
+
+            std_numerical_stability_constant = 10.0
             if words_to_fix_rotation: 
                 mask = np.ones_like(q_mean.numpy())  
                 for idx, word in enumerate(words_to_fix_rotation):
@@ -227,7 +229,7 @@ def mean_field_vi(embedding, data=None, data_generator=None, N=None, model="cbow
                 mask = tf.constant(mask, dtype=tf.float64)
 
                 opt_mean_var.assign(tf.multiply(opt_mean_var, mask))
-                opt_std_var.assign(tf.multiply(opt_std_var, mask))
+                opt_std_var.assign( tf.multiply(opt_std_var, mask) + (mask-1.0) * std_numerical_stability_constant ) 
 
 
             q_mean.assign(opt_mean_var)
