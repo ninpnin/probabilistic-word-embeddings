@@ -133,12 +133,12 @@ class LaplacianEmbedding(Embedding):
     """
     Probabilistic embedding with a Laplacian graph prior
     """
-    def __init__(self, vocabulary=None, dimensionality=100, graph=None, lambda0=1.0, lambda1=1.0, shared_context_vectors=True, saved_model_path=None):
+    def __init__(self, vocabulary=None, dimensionality=100, graph=None, lambda0=1.0, lambda1=1.0, shared_context_vectors=True, saved_model_path=None, seed=None):
         if saved_model_path is None:
             if type(graph) != nx.Graph:
                 raise TypeError("graph must be a nx.Graph")
             self.lambda1 = lambda1
-            super().__init__(vocabulary, dimensionality, lambda0=lambda0, shared_context_vectors=shared_context_vectors)
+            super().__init__(vocabulary, dimensionality, lambda0=lambda0, shared_context_vectors=shared_context_vectors, seed=seed)
             for wd in list(graph.nodes):
                 if wd in graph.nodes and wd not in self.vocabulary:
                     graph.remove_node(wd)
