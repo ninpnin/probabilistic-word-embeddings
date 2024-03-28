@@ -91,6 +91,10 @@ class Embedding:
         ix = self.tf_vocabulary.lookup(key)
         return ix != -1
 
+    @property
+    def dimensionality(self):
+        return self.theta.shape[-1]
+
     def log_prob(self, batch_size, data_size):
         """
         Calculate the log (prior) probability of the embedding taking its current value
