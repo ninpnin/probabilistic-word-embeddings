@@ -4,6 +4,7 @@ import pickle
 import warnings
 import logging, colorlog
 import sys
+import copy
 logging.TRAIN = 25
 logging.addLevelName(logging.TRAIN, 'TRAIN')
 
@@ -115,3 +116,17 @@ def transfer_embeddings(e_source, e_target, ignore_group=False):
         source_words = [source_vocab_normalized[_normalize_word(wd)] for wd in target_words]
         e_target[target_words] = e_source[source_words]
     return e_target
+
+def normalize_rotation(e, words):
+    """
+    Normalize rotation by setting dim (dim -1)/2 elements in the embeddings matrix to zero
+
+    """
+
+    assert len(words) == e.dimensionality, f"We need {e.dimensionality} words to fix the rotation, got {len(words)}"
+    e_new = copy.deepcopy(e)
+    Q, R = np.linalg.qr(e[words].numpy().T)
+    vocabulary = [wd for wd in e.vocabulary]
+
+    e_new[vocabulary] = (Q.T @ e[vocabulary].numpy().T).T
+    return e_new
