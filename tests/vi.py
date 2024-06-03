@@ -75,6 +75,31 @@ class Test(unittest.TestCase):
         init_std = 0.2
         q_mu, q_std_e = mean_field_vi(e, text, model="cbow", evaluate=False, ws=ws, batch_size=batch_size, init_mean=init_mean, init_std=init_std, epochs=5)
 
+    def test_vi_convergence(self):
+        """
+        Test mean-field variational inference with example dataset
+        """
+        with open("tests/data/0.txt") as f:
+            text = f.read().lower().split()
+        text, vocabulary = preprocess_standard(text)
+
+        vocab_size = len(vocabulary)
+        batch_size = 25
+        ws = 3
+        dim = 2
+
+        text_full = []
+        for i in range(100):
+            text_full += text
+
+        e0 = Embedding(vocabulary=vocabulary, dimensionality=dim)
+        init_mean = False
+        init_std = 0.2
+        q_mu0, q_std_e0 = mean_field_vi(e, text, model="sgns", evaluate=False, ws=ws, batch_size=batch_size, init_mean=init_mean, init_std=init_std, epochs=5)
+
+        e = Embedding(vocabulary=vocabulary, dimensionality=dim)
+        q_mu, q_std_e = mean_field_vi(e, text_full, model="sgns", evaluate=False, ws=ws, batch_size=batch_size, init_mean=init_mean, init_std=init_std, epochs=5)
+        self.assertGreater(np.mean(q_std_e.theta), np.mean(q_std_e0.theta)) 
 
 
 if __name__ == '__main__':

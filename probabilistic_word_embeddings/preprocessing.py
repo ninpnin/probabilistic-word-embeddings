@@ -4,6 +4,12 @@ from .utils import dict_to_tf
 import progressbar
 import warnings
 
+def _pb_if_needed(l):
+    if len(iterator) >= 100:
+        return progressbar.progressbar(l)
+    else:
+        return l
+
 def filter_rare_words(data, limit=5, keep_words=set()):
     """
     Filter out words that only occur a handful of times
@@ -24,7 +30,7 @@ def filter_rare_words(data, limit=5, keep_words=set()):
 
         outdata = []
         for dataset in data:
-            outdataset = [wd for wd in progressbar.progressbar(dataset) if counts[wd] >= limit or wd in keep_words]
+            outdataset = [wd for wd in _pb_if_needed(dataset) if counts[wd] >= limit or wd in keep_words]
             outdata.append(outdataset)
     else:
         for wd in progressbar.progressbar(data):
@@ -105,13 +111,15 @@ def preprocess_standard(text, keep_words=set(), limit=5, downsample=True, seed=N
     freqs = {wd: counts[wd] / N for wd in list(vocabulary)}
     return text, freqs
 
-def preprocess_partitioned(texts, labels=None, keep_words=set(), limit=5, downsample=True, seed=None):
+def preprocess_partitioned(texts, labels=None, lowercase=True, remove_punctuation=True, keep_words=set(), limit=5, downsample=True, seed=None):
     """
     Standard preprocessing for partitioned datasets: filter out rare (<=5 occurences) words, downsample common words.
 
     Args:
         texts (list): list of texts, each element of which is a list of strs
         labels (list): label associated with each 
+        lowercase (bool): whether to convert all words to lowercase
+        remove_punctuation (bool): whether to remove punctuation
         keep_words: (set): words that are kept in the vocabulary regardless of frequency
         limit: (int): words with fewer occurences are discarded
         downsample: whether to do downsampling of common words
@@ -123,6 +131,14 @@ def preprocess_partitioned(texts, labels=None, keep_words=set(), limit=5, downsa
         assert len(texts) == len(labels), "Number of data partitions and labels must be equal"
     assert isinstance(texts[0], list), "Data should be provided as a list of lists"
     N = sum([len(t) for t in texts])
+    if lowercase:
+        texts = [[wd.lower() for wd in t] for t in texts]
+
+    if remove_punctuation:
+        def remove_punctuation_fun(s):
+            return s.replace(".", "").replace(",", "").replace("!", "").replace("?", "")
+        texts = [[remove_punctuation_fun(wd) for wd in t] for t in texts]
+
     texts, counts = filter_rare_words(texts, limit=limit, keep_words=keep_words)
     if downsample:
         texts = [downsample_common_words(text, counts, seed=seed) for text in texts]
