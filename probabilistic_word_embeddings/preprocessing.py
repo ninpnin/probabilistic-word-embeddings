@@ -5,7 +5,7 @@ import progressbar
 import warnings
 
 def _pb_if_needed(l):
-    if len(iterator) >= 100:
+    if len(l) >= 1000:
         return progressbar.progressbar(l)
     else:
         return l
@@ -57,7 +57,7 @@ def downsample_common_words(data, counts, cutoff=0.00001, chunk_len=5000000, see
     if not isinstance(data, tf.Tensor):
         data = tf.constant(data)
 
-    print("Discard some instances of the most common words...")
+    #print("Discard some instances of the most common words...")
     N = sum(counts.values())
     counts_tf = dict_to_tf(counts)
         # Randomize and fetch by this probability
@@ -65,7 +65,11 @@ def downsample_common_words(data, counts, cutoff=0.00001, chunk_len=5000000, see
         tf.random.set_seed(seed)
         
     if len(data) < chunk_len:
-        frequencies = counts_tf.lookup(data) / N
+        try:
+            frequencies = counts_tf.lookup(data) / N
+        except:
+            print("Error downsampling:", data)
+            return [wd.decode("utf-8") for wd in data.numpy()]
         # Discard probability based on relative frequency
         probs = 1. - tf.sqrt(cutoff / frequencies)
 
@@ -132,16 +136,21 @@ def preprocess_partitioned(texts, labels=None, lowercase=True, remove_punctuatio
     assert isinstance(texts[0], list), "Data should be provided as a list of lists"
     N = sum([len(t) for t in texts])
     if lowercase:
+        print("Convert to lowercase...")
         texts = [[wd.lower() for wd in t] for t in texts]
 
     if remove_punctuation:
+        print("Remove punctuation...")
         def remove_punctuation_fun(s):
             return s.replace(".", "").replace(",", "").replace("!", "").replace("?", "")
         texts = [[remove_punctuation_fun(wd) for wd in t] for t in texts]
 
+    if limit > 1:
+        print("Filter rare words...")    
     texts, counts = filter_rare_words(texts, limit=limit, keep_words=keep_words)
     if downsample:
-        texts = [downsample_common_words(text, counts, seed=seed) for text in texts]
+        print("Discard some instances of the most common words...")
+        texts = [downsample_common_words(text, counts, seed=seed) for text in _pb_if_needed(texts)]
 
     def add_subscript(t, subscript):
         if len(t) == 0:
@@ -160,7 +169,8 @@ def preprocess_partitioned(texts, labels=None, lowercase=True, remove_punctuatio
         return t
 
     if labels is not None:
-        texts = [add_subscript(text, label) for text, label in progressbar.progressbar(zip(texts, labels))]
+        print("Add partition labels to words...")
+        texts = [add_subscript(text, label) for text, label in zip(texts, progressbar.progressbar(labels))]
     vocabs = [set(text) for text in progressbar.progressbar(texts)]
     empty = set()
     vocabulary = empty.union(*vocabs)
@@ -171,6 +181,7 @@ def preprocess_partitioned(texts, labels=None, lowercase=True, remove_punctuatio
         n = len(s)
         return "_".join(s[:n-1])
 
+    print("Calculate word frequencies...")
     if labels is None:
         unnormalized_freqs = {wd: counts[wd] / N for wd in list(vocabulary)}
     else:
