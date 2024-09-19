@@ -200,9 +200,9 @@ def evaluate_analogy(embedding, dataset, K=25):
     r = len(df)
     target_words = list(df[columns[-1]])
 
-    X1 = embedding[df[columns[0]]]
-    X2 = embedding[df[columns[1]]]
-    X3 = embedding[df[columns[2]]]
+    X1 = embedding[list(df[columns[0]])]
+    X2 = embedding[list(df[columns[1]])]
+    X3 = embedding[list(df[columns[2]])]
     X = X1 - X2 + X3
 
     inv_vocab = {v: k for k, v in e.vocabulary.items()}
