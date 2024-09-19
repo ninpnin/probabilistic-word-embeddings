@@ -4,7 +4,7 @@ Definitions of the prior distributions of the embeddings.
 import numpy as np
 import tensorflow as tf
 import networkx as nx
-import random, pickle
+import random, pickle, json
 import progressbar
 from .utils import dict_to_tf
 import warnings
@@ -39,14 +39,18 @@ class Embedding:
         else:
             if type(saved_model_path) != str:
                 raise TypeError("saved_model_path must be a str")
-            with open(saved_model_path, "rb") as f:
-                d = pickle.load(f)
+            d = None
+            if saved_model_path.split(".")[-1] == "json":
+                with open(saved_model_path, "r") as f:
+                    d = json.load(f)
+            else:
+                with open(saved_model_path, "rb") as f:
+                    d = pickle.load(f)
             self.vocabulary = d["vocabulary"]
             self.tf_vocabulary = dict_to_tf(self.vocabulary)
-            self.theta = tf.Variable(d["theta"])
+            self.theta = tf.Variable(d["theta"], dtype=tf.float64)
             self.lambda0 = d["lambda0"]
 
-    @tf.function
     def _get_embeddings(self, item):
         if type(item) == str:
             return self.theta[self.vocabulary[item]]
@@ -126,8 +130,16 @@ class Embedding:
         if hasattr(self, 'graph'):
             d["graph"] = self.graph
 
-        with open(path, "wb") as f:
-            pickle.dump(d, f, protocol=4)
+        if path.split(".")[-1] == "json":
+            d["theta"] = theta.tolist()
+            if "graph" in d:
+                d["graph"] = nx.readwrite.json_graph.adjacency_data(self.graph)
+
+            with open(path, 'w') as f:
+                json.dump(d, f, indent=2, ensure_ascii=False)
+        else:
+            with open(path, "wb") as f:
+                pickle.dump(d, f, protocol=4)
 
 class LaplacianEmbedding(Embedding):
     """
@@ -147,11 +159,16 @@ class LaplacianEmbedding(Embedding):
             self.graph = graph
             self.edges_i = None
         else:
-            with open(saved_model_path, "rb") as f:
-                d = pickle.load(f)
+            d = None
+            if saved_model_path.split(".")[-1] == "json":
+                with open(saved_model_path, "r") as f:
+                    d = json.load(f)
+            else:
+                with open(saved_model_path, "rb") as f:
+                    d = pickle.load(f)
             self.vocabulary = d["vocabulary"]
             self.tf_vocabulary = dict_to_tf(self.vocabulary)
-            self.theta = tf.Variable(d["theta"])
+            self.theta = tf.Variable(d["theta"], dtype=tf.float64)
             self.lambda0 = d["lambda0"]
             self.lambda1 = d["lambda1"]
             self.graph = d["graph"]

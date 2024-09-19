@@ -171,10 +171,11 @@ def preprocess_partitioned(texts, labels=None, lowercase=True, remove_punctuatio
     if labels is not None:
         print("Add partition labels to words...")
         texts = [add_subscript(text, label) for text, label in zip(texts, progressbar.progressbar(labels))]
-    vocabs = [set(text) for text in progressbar.progressbar(texts)]
-    empty = set()
-    vocabulary = empty.union(*vocabs)
-
+    
+    vocabulary = set()
+    for text in progressbar.progressbar(texts):
+        for wd in text:
+            vocabulary.add(wd)
 
     def _remove_subscript(wd):
         s = wd.split("_")

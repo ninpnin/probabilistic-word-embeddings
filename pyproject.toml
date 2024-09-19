@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "probabilistic-word-embeddings"
-version = "1.13.7"
+version = "1.15.1"
 description = "Probabilistic Word Embeddings for Python"
 authors = ["Your Name <you@example.com>"]
 license = "MIT"
