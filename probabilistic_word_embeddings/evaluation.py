@@ -19,6 +19,7 @@ from scipy.stats import spearmanr as rank_correlation
 import tensorflow as tf
 import copy
 from .embeddings import Embedding
+from .utils import align
 import warnings
 
 ###################
@@ -292,3 +293,18 @@ def bli(pairs, e, precision=[1,5,15], reverse=False):
 
     columns = ["source", "target"] + [f"p@{p}" for p in precision] + [f"guess-{g}" for g in range(max(precision))]
     return pd.DataFrame(rows, columns=columns)
+
+def posterior_mean(paths):
+    emb_paths = sorted(paths)
+    e_ref = Embedding(saved_model_path=emb_paths[-1])
+    words_reference = [f"{wd}_c" for wd in list(e_ref.vocabulary) if "_c" not in wd]
+
+    e_mean = Embedding(saved_model_path=emb_paths[-1])
+    e_mean.theta = e_mean.theta * 0.0
+
+    for emb_path in progressbar.progressbar(emb_paths):
+        e = Embedding(saved_model_path=emb_path)
+        e_aligned = align(e_ref, e, words_reference)
+        e_mean.theta += e_aligned.theta / len(emb_paths)
+
+    return e_mean
