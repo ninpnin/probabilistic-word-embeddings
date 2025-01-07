@@ -130,3 +130,19 @@ def normalize_rotation(e, words):
 
     e_new[vocabulary] = (Q.T @ e[vocabulary].numpy().T).T
     return e_new
+
+def posterior_mean(paths):
+    emb_paths = sorted(paths)
+    e_ref = Embedding(saved_model_path=emb_paths[-1])
+    words_reference = [f"{wd}_c" for wd in list(e_ref.vocabulary) if "_c" not in wd]
+
+    e_mean = Embedding(saved_model_path=emb_paths[-1])
+    e_mean.theta = e_mean.theta * 0.0
+
+    for emb_path in emb_paths:
+        e = Embedding(saved_model_path=emb_path)
+        e_aligned = align(e_ref, e, words_reference)
+        e_mean.theta += e_aligned.theta / len(emb_paths)
+
+    return e_mean
+
