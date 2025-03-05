@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "probabilistic-word-embeddings"
-version = "2.0.0rc1"
+version = "2.0.0rc2"
 description = "Probabilistic Word Embeddings for Python"
 authors = ["Your Name <you@example.com>"]
 license = "MIT"
@@ -9,7 +9,7 @@ documentation = "https://ninpnin.github.io/probabilistic-word-embeddings/"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-tensorflow = "^2.16.1"
+tensorflow = "~=2.16"
 tensorflow-probability = "*"
 tf-keras = "*"
 progressbar2 = "*"
