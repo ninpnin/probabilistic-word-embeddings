@@ -68,6 +68,10 @@ def map_estimate(embedding, data=None, ns_data=None, data_generator=None, N=None
         ns_data = data
 
     opt = tf.keras.optimizers.Adam(learning_rate=0.001)
+    opt_theta = opt.add_variable_from_reference(embedding.theta, "theta")#, initial_value=embedding.theta)
+    opt.build([opt_theta])
+    opt_theta.assign(embedding.theta)
+
     e = embedding
     if valid_data is not None:
         if not isinstance(valid_data, tf.Tensor):
@@ -107,13 +111,17 @@ def map_estimate(embedding, data=None, ns_data=None, data_generator=None, N=None
                 i,j,x = next(data_generator)
             else:
                 i,j,x  = generate_batch(data, model=model, ws=ws, ns=ns, batch_size=batch_size, start_ix=start_ix, ns_data=ns_data)
-            if model == "sgns":
-                objective = lambda: - tf.reduce_sum(sgns_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
-            elif model == "cbow":
-                objective = lambda: - tf.reduce_sum(cbow_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
-            _ = opt.minimize(objective, [embedding.theta])
+            with tf.GradientTape() as tape:
+                if model == "sgns":
+                    objective = - tf.reduce_sum(sgns_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
+                elif model == "cbow":
+                    objective = - tf.reduce_sum(cbow_likelihood(e, i, j, x=x)) - e.log_prob(batch_size, N)
+                d_l_d_theta = - tape.gradient(objective, e.theta)
+
+            opt.update_step(d_l_d_theta, opt_theta, 0.001)
+            embedding.theta.assign(opt_theta)
             if training_loss:
-                epoch_training_loss.append(objective() / len(i))
+                epoch_training_loss.append(objective / len(i))
                 batch_no = len(epoch_training_loss)
                 if batch_no % 250 == 0:
                     logger.log(logging.TRAIN, f"Epoch {epoch} mean training loss after {batch_no} batches: {np.mean(epoch_training_loss)}")
@@ -155,7 +163,7 @@ def mean_field_vi(embedding, data=None, data_generator=None, N=None, model="cbow
     if model not in ["sgns", "cbow"]:
         raise ValueError("model must be 'sgns' or 'cbow'")
 
-    optimizer = tf.keras.optimizers.experimental.Adam(learning_rate=0.001)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
     e = embedding
 
     if words_to_fix_rotation:
@@ -177,9 +185,12 @@ def mean_field_vi(embedding, data=None, data_generator=None, N=None, model="cbow
         logger.info(f"Init std: {init_std}")
     q_std_log =  tf.Variable(init_std)
     
-    opt_mean_var = optimizer.add_variable_from_reference(q_mean, "q_mean", initial_value=q_mean)
-    opt_std_var = optimizer.add_variable_from_reference(q_std_log, "q_std_log", initial_value=q_std_log)
+    opt_mean_var = optimizer.add_variable_from_reference(q_mean, "q_mean")
+    opt_std_var = optimizer.add_variable_from_reference(q_std_log, "q_std_log")
     optimizer.build([opt_mean_var, opt_std_var])
+
+    opt_mean_var.assign(q_mean)
+    opt_std_var.assign(q_std_log)
 
     elbos = []
     for epoch in range(epochs):
@@ -216,8 +227,8 @@ def mean_field_vi(embedding, data=None, data_generator=None, N=None, model="cbow
             # Add the entropy term
             d_l_q_std_log = d_l_q_std_log - tf.ones(d_l_q_std_log.shape, dtype=tf.float64)
 
-            optimizer.update_step(d_l_d_q_mean, opt_mean_var)
-            optimizer.update_step(d_l_q_std_log, opt_std_var)
+            optimizer.update_step(d_l_d_q_mean, opt_mean_var, 0.001)
+            optimizer.update_step(d_l_q_std_log, opt_std_var, 0.001)
             
 
             std_numerical_stability_constant = 10.0
